@@ -1,0 +1,17 @@
+﻿product,cpe_name
+AuditBoard,AuditBoard: none yet
+Vertex Indirect Tax,idem???
+Microsoft 365 Enterprise E3/E5,"license bundle—pull CPEs for Word, Excel, Outlook, etc."
+Drake Tax,niche SMB apps – no CPEs
+OfficeTools,niche SMB apps – no CPEs
+Practice CS,niche SMB apps – no CPEs
+SafeSend,niche SMB apps – no CPEs
+Thomson Reuters ONESOURCE,no CPE (provider has not registered)
+Infor CloudSuite Financials,no CPE yet (no published CVEs)
+Sage 50cloud,Sage has not published CPEs
+Sage Intacct,Sage has not published CPEs
+TeamMate Analytics,TeamMate: none
+Google Workspace,"treat underlying components (Chrome, Gmail)"
+CCH Axcess Tax/ProSystem fx Tax,Wolters Kluwer tools – no CPEs
+CCH ProSystem fx Tax,Wolters Kluwer tools – no CPEs
+ProSystem fx Engagement,Wolters Kluwer tools – no CPEs
