@@ -1,6 +1,6 @@
-# 1. Introduction
+# __1. Introduction__
 
-![csf_wheel_v3.png](c274d183-4442-4ec4-9cca-8754e8215f14.png)
+![csf_wheel_v3.png](../img/csf_wheel_v3.png)
 
 ## NIST Cybersecurity Framework (CSF)
 
@@ -26,7 +26,7 @@ Prioritizing cyber resilency starts with understanding an organization's current
 * __Risk Assessment__: "The cybersecurity risk to the organization, assets, and individuals is understood by the organization" ([ID.RA](https://csrc.nist.gov/Projects/Cybersecurity-Framework/Filters#/csf/filters:~:text=Risk%20Assessment%20(ID.RA)%3A%20The%20cybersecurity%20risk%20to%20the%20organization%2C%20assets%2C%20and%20individuals%20is%20understood%20by%20the%20organization))
 * __Improvement__:  "Improvements to organizational cybersecurity risk management processes, procedures and activities are identified across all CSF Functions" ([ID.IM](https://csrc.nist.gov/Projects/Cybersecurity-Framework/Filters#/csf/filters:~:text=Improvement%20(ID.IM)%3A%20Improvements%20to%20organizational%20cybersecurity%20risk%20management%20processes%2C%20procedures%20and%20activities%20are%20identified%20across%20all%20CSF%20Functions))
 
-![csf_categories.png](f58afce7-646b-4482-9d71-702d9fd354b8.png)
+![csf_categories.png](../img/csf_categories.png)
 
 ## Project Objective 
 ------
@@ -197,7 +197,7 @@ assets
 ```python
 vulnerabilities = pd.read_csv('../data/vuln_catalogue_v1.csv')
 print("Total rows:", len(vulnerabilities))
-vulnerabilities.head()
+vulnerabilities[['cveID','published', 'baseScore', 'baseSeverity', 'description', 'full_json']]
 ```
 
     Total rows: 442
@@ -224,158 +224,122 @@ vulnerabilities.head()
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>Unnamed: 0</th>
       <th>cveID</th>
-      <th>cpeName</th>
       <th>published</th>
-      <th>last_modified</th>
-      <th>vectorString</th>
       <th>baseScore</th>
       <th>baseSeverity</th>
-      <th>attackVector</th>
-      <th>attackComplexity</th>
-      <th>...</th>
-      <th>userInteraction</th>
-      <th>scope</th>
-      <th>confidentialityImpact</th>
-      <th>integrityImpact</th>
-      <th>availabilityImpact</th>
-      <th>cwes</th>
       <th>description</th>
-      <th>references</th>
-      <th>tags</th>
       <th>full_json</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>0</td>
-      <td>NaN</td>
-      <td>cpe:2.3:a:tableau:tableau_desktop:2021.1:*:*:*...</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>...</td>
-      <td>NaN</td>
-      <td>NaN</td>
       <td>NaN</td>
       <td>NaN</td>
       <td>NaN</td>
       <td>NaN</td>
       <td>NO CVEs FOUND FOR THIS ASSET</td>
       <td>NaN</td>
-      <td>NO CVEs</td>
-      <td>NaN</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>1</td>
       <td>CVE-2021-39836</td>
-      <td>cpe:2.3:a:adobe:acrobat_reader:20.004.30006:*:...</td>
       <td>2021-09-29T16:15:08.513</td>
-      <td>2024-11-21T06:20:20.730</td>
-      <td>CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H</td>
       <td>7.8</td>
       <td>HIGH</td>
-      <td>LOCAL</td>
-      <td>LOW</td>
-      <td>...</td>
-      <td>REQUIRED</td>
-      <td>UNCHANGED</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>CWE-416</td>
       <td>Acrobat Reader DC versions 2021.005.20060 (and...</td>
-      <td>https://helpx.adobe.com/security/products/acro...</td>
-      <td>Release Notes, Vendor Advisory, Release Notes,...</td>
       <td>{'cve': {'id': 'CVE-2021-39836', 'sourceIdenti...</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>2</td>
       <td>CVE-2021-39837</td>
-      <td>cpe:2.3:a:adobe:acrobat_reader:20.004.30006:*:...</td>
       <td>2021-09-29T16:15:08.573</td>
-      <td>2024-11-21T06:20:20.890</td>
-      <td>CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H</td>
       <td>7.8</td>
       <td>HIGH</td>
-      <td>LOCAL</td>
-      <td>LOW</td>
-      <td>...</td>
-      <td>REQUIRED</td>
-      <td>UNCHANGED</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>CWE-416</td>
       <td>Acrobat Reader DC versions 2021.005.20060 (and...</td>
-      <td>https://helpx.adobe.com/security/products/acro...</td>
-      <td>Release Notes, Vendor Advisory, Release Notes,...</td>
       <td>{'cve': {'id': 'CVE-2021-39837', 'sourceIdenti...</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>3</td>
       <td>CVE-2021-39838</td>
-      <td>cpe:2.3:a:adobe:acrobat_reader:20.004.30006:*:...</td>
       <td>2021-09-29T16:15:08.633</td>
-      <td>2024-11-21T06:20:21.040</td>
-      <td>CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H</td>
       <td>7.8</td>
       <td>HIGH</td>
-      <td>LOCAL</td>
-      <td>LOW</td>
-      <td>...</td>
-      <td>REQUIRED</td>
-      <td>UNCHANGED</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>CWE-416</td>
       <td>Acrobat Reader DC versions 2021.005.20060 (and...</td>
-      <td>https://helpx.adobe.com/security/products/acro...</td>
-      <td>Release Notes, Vendor Advisory, Release Notes,...</td>
       <td>{'cve': {'id': 'CVE-2021-39838', 'sourceIdenti...</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>4</td>
       <td>CVE-2021-39839</td>
-      <td>cpe:2.3:a:adobe:acrobat_reader:20.004.30006:*:...</td>
       <td>2021-09-29T16:15:08.693</td>
-      <td>2024-11-21T06:20:21.190</td>
-      <td>CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H</td>
       <td>7.8</td>
       <td>HIGH</td>
-      <td>LOCAL</td>
-      <td>LOW</td>
-      <td>...</td>
-      <td>REQUIRED</td>
-      <td>UNCHANGED</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>HIGH</td>
-      <td>CWE-416</td>
       <td>Acrobat Reader DC versions 2021.005.20060 (and...</td>
-      <td>https://helpx.adobe.com/security/products/acro...</td>
-      <td>Release Notes, Vendor Advisory, Release Notes,...</td>
       <td>{'cve': {'id': 'CVE-2021-39839', 'sourceIdenti...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>437</th>
+      <td>CVE-1999-1322</td>
+      <td>1998-11-12T05:00:00.000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>The installation of 1ArcServe Backup and Inocu...</td>
+      <td>{'cve': {'id': 'CVE-1999-1322', 'sourceIdentif...</td>
+    </tr>
+    <tr>
+      <th>438</th>
+      <td>CVE-2000-0216</td>
+      <td>2000-02-29T05:00:00.000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>Microsoft email clients in Outlook, Exchange, ...</td>
+      <td>{'cve': {'id': 'CVE-2000-0216', 'sourceIdentif...</td>
+    </tr>
+    <tr>
+      <th>439</th>
+      <td>CVE-2011-0290</td>
+      <td>2011-10-21T10:55:03.757</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>The BlackBerry Collaboration Service in Resear...</td>
+      <td>{'cve': {'id': 'CVE-2011-0290', 'sourceIdentif...</td>
+    </tr>
+    <tr>
+      <th>440</th>
+      <td>CVE-2012-2284</td>
+      <td>2012-10-18T17:55:01.613</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>The (1) install and (2) upgrade processes in E...</td>
+      <td>{'cve': {'id': 'CVE-2012-2284', 'sourceIdentif...</td>
+    </tr>
+    <tr>
+      <th>441</th>
+      <td>CVE-2024-21410</td>
+      <td>2024-02-13T18:15:59.680</td>
+      <td>9.8</td>
+      <td>CRITICAL</td>
+      <td>Microsoft Exchange Server Elevation of Privile...</td>
+      <td>{'cve': {'id': 'CVE-2024-21410', 'sourceIdenti...</td>
     </tr>
   </tbody>
 </table>
-<p>5 rows × 21 columns</p>
+<p>442 rows × 6 columns</p>
 </div>
 
 
 
-# F1. Asset Inventory: Ingesting CPEs
+# __F1. Asset Inventory__
 
 Before CVEs can be ingested and processed for risk scoring, ``cpe_name``s must be identified and ingested as this is a required parameter when using the NVD CVE API. When no ``cpe_name`` is defined in the NVD CVE API call, all ``cpe_names`` are returned. 
 
@@ -429,67 +393,137 @@ Key features:
                      \- CPE Name: cpe:2.3:a:microsoft:exchange_server:2019:cumulative_update_\[1-14]:\*:\*:\*:\*:\*:*\
                      ![f2.2.png](../img/f1/f1_knownissue.png)
 
-# F1. Asset Inventory: CPE Ingestion Module Scrnshts
+# __F1. Asset Inventory Screenshots__
 
-Using "__adobe__" as the example for ingesting CPEs:
+### Using "__adobe__" as the example for ingesting CPEs:
+***
 
-1. Upon initiating code, the end user is met with a prompt
 
-![image.png](ee11b235-b61d-43e6-a1ee-fca0a8409393.png)
+##### 1. Upon initiating code, the end user is met with a prompt
+\
+![image.png](../img/f1/f1.1.png)
+***
 
-2. While the program is searching the CPE API, the user's screen should look like this
+##### 2. While the program is searching the CPE API, the user's screen should look like this
+\
+![image.png](../img/f1/f1.2.png)
+***
 
-![image.png](6426b07e-e60c-4fff-8157-473aafa3010a.png)
+##### 3. As you can see, there are thousands of results for the vendor, "adobe"
+\
+![image.png](../img/f1/f1.3.png)
+***
 
-3. As you can see, there are thousands of results for the vendor, "adobe"
-
-![image.png](c4b11824-7766-4ef8-a5dd-e0efd8d1a656.png)
-
-4. The program will prommpt the user with a yes/no/exit scenario before saving the results
+##### 4. The program will prommpt the user with a yes/no/exit scenario before saving the results
+\
     * In the example, we choose no so we can return to search and refine the results 
 
-![image.png](36aaaefe-daab-4814-8214-8c5b4601fa0b.png)
+![image.png](../img/f1/f1.4.png)
+***
 
-5. To refine the search, it is recommended users add product name keyword after vendor in the search bar
+##### 5. To refine the search, it is recommended users add product name keyword after vendor in the search bar
+\
+![image.png](../img/f1/f1.5.png)
+***
 
-![image.png](f8365d3e-225f-4423-9671-35b95fed5294.png)
+##### 6. In this example, vendor and product name still yield too many results
+\
+![image.png](../img/f1/f1.6.png)
+***
 
-6. In this example, vendor and product name still yield too many results
+##### 7. At this point, adding the product version is sufficient for narrowing down results appropriately
+* This does not always narrow results down to the exact product needing to be inventoried
+  * Application flaw to be remedied in future iterations
+    * Integrate a user input prompt that allows users to choose which CPEs to save from a results list
+      * Results list will likely need to be n-CPEs or less to perform well without more advanced GUI features
+\
+![image.png](../img/f1/f1.7.png)
+***
 
-![image.png](5c59ebe3-a6d4-4573-9e8d-9349f1a7ee21.png)
+##### 8. The refined results best accurately reflect the asset to be inventoried and can now be saved to file:
+\
+![image.png](../img/f1/f1.8.png)
+***
 
-7. At this point, adding the product version is sufficient for narrowing down results appropriately
-    * This does not always narrow results down to the exact product needing to be inventoried
-        * Application flaw to be remedied in future iterations
-            * Integrate a user input prompt that allows users to choose which CPEs to save from a results list
-            * Results list will likely need to be n-CPEs or less to perform well without more advanced GUI features
-        * Alternatively, users can choose to further refine search using additional parameters
+##### 9. The application will return the file path the data was saved to and loop back to the keyword search bar
+* Users can choose to continue searching or type 'exit' to terminate the search
+\
+![image.png](../img/f1/f1.9.png)
 
-![image.png](d49ce1f3-0f45-498b-a9c4-1922643a72ee.png)
+# __F2. Identifying Vulnerabilities__
 
+Once the ``cpe_whitelist.csv`` has been compiled, the CVE API can be called to ingest CVEs relating to the user-defined CPEs.
 
-8. The refined results best accurately reflect the asset to be inventoried and can now be saved to file:
+## Intended Purpose of Code
 
-![image.png](a111ef94-35fc-4c0c-bc1c-38380ee6bd20.png)
+The below code was generated by AI and modified by the developer to create a simple to use tool that interacts with the NVD CVE API.
 
+### Key features:
 
-9. The application will return the file path the data was saved to and loop back to the keyword search bar
-    * Users can choose to continue searching or type 'exit' to terminate the search
+* Loads ``cpe_whitelist.csv`` generated in __F1. Asset Inventory__
+    * Either loads to a dataframe or saves to a new file for ingested CVE data to be appended to
+        * Regardless of loading to dataframe or saving to new file, ingested CVE data will need to be joined to corresponding CPE
+            * Due to this, duplicate CVEs are to be expected and necessary for risk scoring granularity
+* Ingests CVEs according to CPEs recorded in ``cpe_whitlelist.csv``
+    * Columns for CVE data should reflect types of information discussed in the __Information returned__ section above
+* Joins CVE data to corresponding CPEs
+    * A surrogate key is generated for the joined dataset
+    * A new row will be created for each CVE that corresponds to one (1) CPE
 
-![image.png](0827f826-9385-4464-8d2e-22a6fac38c5c.png)
+To handle cases where a CPE from the whitelist has no associated CVEs, a record must be generated that explicitly inserts a row for every CPE that returns no CVEs. This allows users to:
+* Track all inventoried assets, even those with zero known vulnerabilities.
+* Preserve one-to-one continuity between asset inventory (whitelist) and vulnerability table.
+* Avoid accidental data loss or gaps in your final reports.
 
-# __F2. Vulnerabilities Identification__
+## Known Issues
 
-![image.png](67078a8d-8189-4e35-9a30-d7b7f0de91ea.png)\
-![image.png](31f0b1e4-4a0e-45fb-bbb0-209ba5cc9148.png)\
-![f2.1.png](4845f054-08b4-46b2-a079-c5739fa3012a.png)\
-![image.png](fd4770b4-7a77-46f5-bc66-4a1183f5d4f7.png)\
-![image.png](96881b34-bc7a-438e-9fac-33512e2dd5bd.png)\
-![image.png](de7d1485-1044-4c65-9bf3-56d2f4bd0662.png)\
-![image.png](25d6ac96-1a12-4e0c-861c-e64360cd4928.png)\
-![image.png](f0f7cc52-03da-4f6b-b8f9-378174735a9f.png)
+* ``exploitabilityScore`` and ``impactScore`` do not return in the columns output when CVE–CPE rows are collected
+* In the data processing cells to retrieve the missing ``exploitabilityScore`` and ``impactScore``:
+    * the ``DataFrame`` generated in the API retrieval must first be saved and reloaded
+        * for some reason the code is unsuccessful at pulling out these scores (all values return as 'None')
+        * but does successfully return scores when the data is loaded from a csv file
 
-# F3. Risk Scoring
+# __F2. Vulnerabilities Identification Screenshots__
+
+##### 1. 
+\
+![image.png](../img/f2/f2.1.png)
+***
+
+##### 2. 
+\
+![image.png](../img/f2/f2.2.png)
+***
+
+##### 3. 
+\
+![image.png](../img/f2/f2.3.png)
+***
+
+##### 4. 
+\
+![image.png](../img/f2/f2.4.png)
+***
+
+##### 5. 
+\
+![image.png](../img/f2/f2.5.png)
+***
+
+##### 6. 
+\
+![image.png](../img/f2/f2.6.png)
+***
+
+##### 7. 
+\
+![image.png](../img/f2/f2.7.png)
+##### 8. 
+\
+![image.png](../img/f2/f2.8.png)
+***
+
+# __F3. Risk Scoring__
 
 >>_The CSF’s use will vary based on an organization’s unique mission and risks. With an understanding of stakeholder expectations and risk appetite and tolerance (as outlined in GOVERN), an organization can prioritize cybersecurity activities to make informed decisions about cybersecurity expenditures and actions. An organization may choose to handle risk in one or more ways — including mitigating, transferring, avoiding, or accepting negative risks and realizing, sharing, enhancing, or accepting positive risks — depending on the potential impacts and likelihoods. Importantly, an organization can use the CSF both internally to manage its cybersecurity capabilities and externally to oversee or communicate with third parties._\
 \
@@ -602,10 +636,6 @@ The risk scoring module was designed with an interactive dashboard that generate
 * Pie Chart
     * distribution of severity levels (Critical/High/Medium/Low)
 
-\
-\
-_The interactive components of the __F3. Risk Scoring__ code were AI generated to tailor analysis to individual user needs._
-
 ### Known Issues
 
 * Save buttons overwrite existing files instead of saving a unique file
@@ -613,23 +643,90 @@ _The interactive components of the __F3. Risk Scoring__ code were AI generated t
 * No way to sort summary tables
     * _Needs more thought..._
 
-## Screenshots
+\
+\
+_The interactive components of the __F3. Risk Scoring__ code were AI generated to tailor analysis to individual user needs._
 
-add here
+# __F3. Risk Scoring Screenshots__
 
-# F4. Mitigation Recommendations
+##### 1. Users can choose different risk formulas and aggregation methods, as well as adjust the slider to account for risk tolerance thresholds
+\
+![image.png](68223781-158f-48b1-81fd-450499ad06ce.png)
+***
+##### 2. Provides users an asset-level summary of risk
+\
+![image.png](b9c8dd31-1e0b-401d-b9b3-ca3c71be0188.png)
+***
+##### 3. Provides users with a summary view of vulnerabilities
+\
+![image.png](e6e31d8a-7bc3-4646-bd73-edd77409af38.png)
+***
+##### 4. Pie chart is a static graph showing users the distribution spread of known vulnerabilities of a given set of assets
+\
+![image.png](c8985e99-e40c-423e-b22d-e3f23883876b.png)
+***
+## 5. Heatmap visualizes riskiest assets
+\
+![image.png](8152faed-a60d-445b-8a79-c42abc3ab73f.png)
+***
+## 6. A date range floating slider allows users greater control of their time series analysis
+\
+![image.png](9046634f-88d2-4f4f-bd2e-3dcd9e1b4495.png)
+***
 
-# Summary of Analysis
+# __F4. Mitigation Recommendations__
 
-_Due to the customizable nature of this application tool, the following analysis is derived from a dataset generated for the purposes of demonstration._
+## Intended Purpose of Code
+
+### Key Features
+
+1. Explain My Top Risk/Mitigations Tips
+    * prompt openAI to summarize in a numbered list
+        * the users top risks
+        * mitigation recommendations to harden systems
+3. Risk Trend Insights
+    * Calculate quarter over quarter change trends
+        * aggregates counts of CVEs by asset and severity
+            * grouped by quarter or year
+        * groups trends by by period, asset, and severity
+    * Prompt openAI to
+        * analyze the trend data
+        * highlight emerging risk patterns
+        * narrate where there were significant spikes or drops
+        * call out assets with the most notable changes
+
+# __F4. Mitigation Recommendations Screenshots__
+
+## 1. Explain My Top Risks + Mitigation Tips prompt
+***
+\
+![image.png](61b1d889-b0ff-461a-a075-ed31a3ec61ef.png)
+***
+## 2. Explain My Top Risks + Mitigation Tips response
+***
+\
+![image.png](46c85f1b-cfad-4782-8a3a-b61287eca737.png)
+***
+## 3. Risk Trends Insight prompt
+***
+\
+![image.png](cc7ba177-ecf9-45cb-9c5f-4de12e5e668b.png)\
+![image.png](d8ac32ad-5bfe-49c3-8db1-485740f44de1.png)
+***
+## 4. Risk Trends Insight response
+***
+\
+![image.png](7217adce-6ccc-46b5-b45a-773c227c73e3.png)\
+![image.png](f0d09f70-a655-4a90-890b-b68e7ede0b08.png)
+***
+
+##### Check out the streamlit webapps for this project at:
+* [CPE/CVE Retrieval Tool](https://cpe-cve-retrieval.streamlit.app/) _(combines features 1 and 2)_
+* [Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)
+
+##### Documentation, code, data, and images for this project can be found on my github repository:  [hgbtx/cyber-risk-scoring](https://github.com/hgbtx/cyber-risk-scoring/)
 
 
+```python
 
-# Still Needed
-
-* Features' overview and screenshots
-* Summary
-    * Project goals, results, & value recap
-    * Key lessons learned
-
-Documentation, code, data, and images for this project can be found on my github repository:  [hgbtx/cyber-risk-scoring](https://github.com/hgbtx/cyber-risk-scoring/blob/main)
+```
