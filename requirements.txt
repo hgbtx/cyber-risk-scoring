@@ -1,20 +1,13 @@
 voila
 pandas
 numpy
-matplotlib.pyplot
+matplotlib
 seaborn
 pathlib
-path
 ast
 ipywidgets
 IPython.display
-FileLink
-display
-Markdown
-interact
-Dropdown
 openai
-OpenAI
 
 
 
