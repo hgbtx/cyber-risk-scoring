@@ -1,35 +1,36 @@
-Based on the provided vulnerability data, let's analyze the trends and identify key risk patterns for each asset and severity level over the given periods.
+Analyzing the provided data, several key trends and patterns emerge across different assets and severities over the quarters.
 
-### Emerging Risk Patterns
+### Significant Spikes and Drops:
 
 1. **Adobe Acrobat Reader:**
-   - **High Severity:** There was a significant increase in high-severity vulnerabilities from 2021Q1 to 2022Q2. The number of high-severity CVEs spiked from 3 in 2021Q4 to 36 in 2022Q2, marking a 111.8% increase. This trend indicates a growing risk associated with this asset.
-   - **Medium Severity:** The medium-severity vulnerabilities also saw fluctuations, with a notable increase in 2022Q2 (24 vulnerabilities) and a subsequent decrease in 2022Q3 (11 vulnerabilities), followed by another increase in 2023Q3 (19 vulnerabilities).
+   - **High Severity:** There was a notable increase in high-severity vulnerabilities from 17 in 2022Q1 to 36 in 2022Q2, marking a 111.8% increase. This trend continued with fluctuations, reaching 16 in 2024Q2, then dropping to 6 in 2025Q1.
+   - **Medium Severity:** The vulnerabilities saw a significant increase from 6 in 2022Q1 to 24 in 2022Q2 (300% increase), followed by fluctuations, with a notable spike to 19 in 2023Q3 before dropping to 3 in 2025Q1.
 
-2. **Oracle Database Server 19c:**
-   - **Critical Severity:** The critical vulnerabilities remained relatively stable, with occasional spikes such as in 2019Q1 and 2020Q1, each reporting 1 critical vulnerability.
-   - **Medium Severity:** There was a significant increase in medium-severity vulnerabilities in 2019Q4, with a 600% increase from the previous quarter. However, this was followed by a decrease in subsequent quarters.
+2. **Oracle Database Server (19c):**
+   - **High Severity:** There was a spike in high-severity vulnerabilities in 2020Q1 with 3 vulnerabilities, followed by a sharp decline to 1 in 2020Q2 and remaining low thereafter.
+   - **Medium Severity:** A significant increase occurred in 2019Q4 with 7 vulnerabilities, a 600% increase from the previous quarter, but then declined to 1 by 2021Q4.
 
-3. **Microsoft Exchange Server 2019:**
-   - **Critical Severity:** There were sporadic critical vulnerabilities, with notable occurrences in 2019Q1 and 2023Q3.
-   - **Medium Severity:** The medium-severity vulnerabilities showed variability, with a peak in 2019Q2 (2 vulnerabilities) and a decrease in subsequent quarters.
+3. **Microsoft Exchange Server (2019):**
+   - **Critical Severity:** There were critical vulnerabilities reported in 2019Q1 and 2023Q3, with a notable absence in other quarters.
+   - **Medium Severity:** Fluctuations were observed, with a peak of 2 vulnerabilities in 2019Q2, followed by a decline to 0 in 2021Q1.
 
-4. **Oracle Database 19c (Enterprise):**
-   - **Medium Severity:** There was a notable increase in medium-severity vulnerabilities in 2019Q3, with a 200% increase from the previous quarter. This trend continued with fluctuations over the subsequent periods.
+4. **Adobe Acrobat Reader (2022Q1 to 2025Q1):**
+   - The high-severity vulnerabilities peaked at 36 in 2022Q2 and fluctuated thereafter, indicating a persistent risk that requires monitoring.
 
-5. **Alfresco:**
-   - **Medium Severity:** There was a spike in medium-severity vulnerabilities in 2020Q1, with an increase from 0 to 3 vulnerabilities, indicating a potential emerging risk.
+### Emerging Risk Patterns:
 
-### Significant Spikes or Drops
+- **Adobe Acrobat Reader** consistently shows high numbers of vulnerabilities, especially in high and medium severities, indicating a persistent risk that needs immediate attention. The fluctuations in vulnerability counts suggest ongoing security challenges.
+  
+- **Oracle Database Server (19c)** experienced significant spikes in medium-severity vulnerabilities, particularly in 2019Q4, which suggests a need for focused security measures during that period. The high-severity vulnerabilities also saw a notable spike in 2020Q1.
 
-- **Adobe Acrobat Reader:** The high-severity vulnerabilities saw a dramatic increase in 2022Q2, followed by fluctuations. This asset requires close monitoring due to its volatility in vulnerability counts.
-- **Oracle Database Server 19c:** The medium-severity vulnerabilities experienced a significant spike in 2019Q4, which was a key period of increased risk.
-- **Microsoft Exchange Server 2019:** The critical vulnerabilities in 2019Q1 and 2023Q3 highlight periods of increased risk, requiring attention.
+- **Microsoft Exchange Server (2019)** showed sporadic critical vulnerabilities, which could indicate targeted attacks or newly discovered vulnerabilities that require immediate patching.
 
-### Assets and Severities Requiring Immediate Attention
+### Assets and Severities Requiring Immediate Attention:
 
-- **Adobe Acrobat Reader:** Given the consistent high numbers and fluctuations in high and medium-severity vulnerabilities, this asset should be prioritized for security reviews and patch management.
-- **Oracle Database Server 19c:** The historical spikes in medium-severity vulnerabilities suggest a need for ongoing monitoring and proactive vulnerability management.
-- **Microsoft Exchange Server 2019:** The presence of critical vulnerabilities in recent quarters indicates a need for immediate attention to ensure these vulnerabilities are addressed promptly.
+1. **Adobe Acrobat Reader**: Given the consistent high numbers of high and medium-severity vulnerabilities, this asset requires immediate attention to mitigate potential risks.
 
-In summary, Adobe Acrobat Reader and Oracle Database Server 19c present the most notable changes and require immediate attention due to their vulnerability trends. Regular patching and security assessments should be prioritized for these assets to mitigate potential risks.
+2. **Oracle Database Server (19c)**: The spikes in medium-severity vulnerabilities, particularly in 2019Q4, suggest a need for enhanced monitoring and patch management strategies.
+
+3. **Microsoft Exchange Server (2019)**: The presence of critical vulnerabilities in certain quarters highlights the need for timely updates and security patches to prevent exploitation.
+
+In conclusion, while Adobe Acrobat Reader presents the most consistent risk across quarters, Oracle Database Server and Microsoft Exchange Server also show periods of heightened vulnerability that require proactive management to ensure security posture is maintained.
