@@ -3,12 +3,4 @@ pandas
 numpy
 matplotlib
 seaborn
-pathlib
-ipywidgets
-IPython.display
 openai
-
-
-
-
-
