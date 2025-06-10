@@ -32,7 +32,7 @@ progress_every = 25
 header = ['WrittenAt', 'Title', 'cpeName']
 
 # --- Streamlit UI Elements ---
-st.title("CPE Inventory + CVE Risk Scoring Tool")
+st.title("Asset Inventory (CPE) & Vulnerability Identification (CVE) Retrieval T")
 
 api_key = st.text_input("Enter your NVD API key", type="password")
 mode = st.radio("Select an action:", ["Search & Save CPEs", "Run CVE Query"])
