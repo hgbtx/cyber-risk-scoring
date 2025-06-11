@@ -3,16 +3,16 @@
 * [Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)
 
 _IMPORTANT NOTE(s)_
-* _Many of the known issues identified in ``project-details-v2.md`` (nested in the self-named folder) 
-were easily resolved after refactoring/porting the original code to work with streamlit._
+* _There is no official documentation at this time of the above streamlit webapps_
+* _Many of the known issues identified in ``project-details-v2.md`` (nested in the self-named folder) were easily resolved after refactoring/porting the original code to work with streamlit._
 * _To use the CPE/CVE retrieval tool, an NVD API key is required._
-    * _These keys are free and can be obtained at: [NVD - API Key Request](https://nvd.nist.gov/developers/request-an-api-key)
-* _Future iterations of the webapps will include:
+    * _These keys are free and can be obtained at: [NVD - API Key Request](https://nvd.nist.gov/developers/request-an-api-key)_
+* _Future iterations of the webapps will include:_
    * _combining both webapps into one (1) multipage streamlit app_
    * _the addition of two (2) buttons at the bottom of the the dashboard that generates a(n):_
       * _top five (5) asset risks report with mitigation tips_
       * _quarter-over-quarter risk trends analysis report for the top three (3) riskiest assets_
-* _There is no documentation at this time of the streamlit webapps_
+
 
 # 1. Introduction
 
