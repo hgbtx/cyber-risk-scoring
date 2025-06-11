@@ -2,10 +2,12 @@
 * [CPE/CVE Retrieval Tool](https://cpe-cve-retrieval.streamlit.app/)
 * [Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)
 
-_IMPORTANT NOTE(s)_ \
-_Many of the known issues identified in ``project-details-v2.md`` (nested in the self-name folder) \
+_IMPORTANT NOTE(s)_
+* _Many of the known issues identified in ``project-details-v2.md`` (nested in the self-named folder) 
 were easily resolved after refactoring/porting the original code to work with streamlit._
-_There is no documentation at this time of the streamlit webapps_
+* _To use the CPE/CVE retrieval tool, an NVD API key is required._
+    * _These keys are free and can be obtained at: [NVD - API Key Request](https://nvd.nist.gov/developers/request-an-api-key)
+* _There is no documentation at this time of the streamlit webapps_
 
 # 1. Introduction
 
