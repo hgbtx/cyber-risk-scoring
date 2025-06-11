@@ -7,6 +7,11 @@ _IMPORTANT NOTE(s)_
 were easily resolved after refactoring/porting the original code to work with streamlit._
 * _To use the CPE/CVE retrieval tool, an NVD API key is required._
     * _These keys are free and can be obtained at: [NVD - API Key Request](https://nvd.nist.gov/developers/request-an-api-key)
+* _Future iterations of the webapps will include:
+   * _combining both webapps into one (1) multipage streamlit app_
+   * _the addition of two (2) buttons at the bottom of the the dashboard that generates a(n):_
+      * _top five (5) asset risks report with mitigation tips_
+      * _quarter-over-quarter risk trends analysis report for the top three (3) riskiest assets_
 * _There is no documentation at this time of the streamlit webapps_
 
 # 1. Introduction
