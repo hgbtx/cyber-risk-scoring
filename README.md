@@ -1,3 +1,20 @@
+### Check out the streamlit webapps for this project at:
+* [CPE/CVE Retrieval Tool](https://cpe-cve-retrieval.streamlit.app/)
+* [Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)
+
+_IMPORTANT NOTE(s)_
+* _There is no official documentation at this time of the above streamlit webapps_
+* _Many of the known issues identified in ``project-details-v2.md`` (nested in the self-named folder) were easily resolved after refactoring/porting the original code to work with streamlit._
+* _To use the CPE/CVE retrieval tool, an NVD API key is required._
+    * _These keys are free and can be obtained at: [NVD - API Key Request](https://nvd.nist.gov/developers/request-an-api-key)_
+* _Future iterations of the webapps will include:_
+   * _combining both webapps into one (1) multipage streamlit app_
+   * _the addition of two (2) buttons at the bottom of the the dashboard that generates a(n):_
+      * _top five (5) asset risks report with mitigation tips_
+      * _quarter-over-quarter risk trends analysis report for the top three (3) riskiest assets_
+      * _powered by the openai api_
+
+
 # 1. Introduction
 
 ![](https://github.com/hgbtx/cyber-risk-scoring/blob/main/img/csf_wheel_v3.png)
@@ -65,3 +82,10 @@ Feature ID | Module Name | Key Component(s) | What it does |
 | F2 | __Vulnerabilities Identification__ | CVE API, Save to File, User Input Required | • Loads CSV file generated in F1<br>• Returns a list of CVEs<br>• Prompts user to save/append to file |
 | F3 | __Risk Evaluation__ | Risk Scoring Module, Performs Risk Calculation, Appends to File | • Loads file generated in F1<br>• computing a composite risk score per asset/business unit<br>• Adds/appends risk score columns to file <br>• maps CVE severity scores for user defined assets |
 | F4 | __Mitigation Recommendations__ | OpenAI API, 4o mini GPT, generates recommendations | Given the top-N CVEs for an asset:<br>• produce plain-English impact summaries and step-by-step mitigation roadmaps. |
+
+
+Check out the streamlit webapps for this project at: \
+[CPE/CVE Retrieval Tool (combines features 1 and 2)](https://cpe-cve-retrieval.streamlit.app/) \
+[Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)\
+Documentation, code, data, and images for this project can be found on my github repository: \
+[hgbtx/cyber-risk-scoring](https://github.com/hgbtx/cyber-risk-scoring/)
