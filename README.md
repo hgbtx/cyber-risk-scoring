@@ -70,5 +70,5 @@ Feature ID | Module Name | Key Component(s) | What it does |
 Check out the streamlit webapps for this project at: \
 [CPE/CVE Retrieval Tool (combines features 1 and 2)](https://cpe-cve-retrieval.streamlit.app/) \
 [Risk Scoring Dashboard](https://f3-risk-scoring.streamlit.app/)\
-Documentation, code, data, and images for this project can be found on my github repository:\ 
+Documentation, code, data, and images for this project can be found on my github repository: \
 [hgbtx/cyber-risk-scoring](https://github.com/hgbtx/cyber-risk-scoring/)
