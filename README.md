@@ -12,6 +12,7 @@ _IMPORTANT NOTE(s)_
    * _the addition of two (2) buttons at the bottom of the the dashboard that generates a(n):_
       * _top five (5) asset risks report with mitigation tips_
       * _quarter-over-quarter risk trends analysis report for the top three (3) riskiest assets_
+      * _powered by the openai api_
 
 
 # 1. Introduction
