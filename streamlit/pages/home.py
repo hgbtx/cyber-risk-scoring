@@ -15,9 +15,14 @@
 # +
 import streamlit as st
 import pandas as pd
+import os
 
 # Main page content
-# st.image(r"C:\Users\hgbtx\Desktop\MIS433\final-project\cyber-risk-scoring\img\csf_wheel_v3.png")
+
+base = os.path.dirname(__file__)
+csv_path = os.path.join(base, "img", "csf_wheel_v3.png")
+st.image(csv_path)
+
 st.sidebar.markdown("# Home")
 st.write(
     "## NIST Cybersecurity Framework (CSF)\n"
