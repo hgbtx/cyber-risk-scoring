@@ -1,0 +1,15 @@
+﻿Feature ID,Module Name,Key Component(s),What it does
+F1,Asset Inventory,"CPE API, Save to File, User Input Required","• Prompts end-user to keyword search an asset (e.g. software, operating system component, hardware)
+• Returns a list of CPEs (includes partial matches)
+• Prompts user to save/append list to CSV file
+• Returns to keyword search prompt
+• User types 'exit' to terminate search"
+F2,Vulnerabilities Identification,"CVE API, Save to File, User Input Required","• Loads CSV file generated in F1
+• Returns a list of CVEs
+• Prompts user to save/append to file"
+F3,Risk Evaluation,"Risk Scoring Dashboard, Performs Risk Calculation, Appends to File","• Loads file generated in F1
+• computes a composite risk score per asset/business unit
+• Adds/appends risk score columns to file
+• maps CVE severity scores for user defined assets"
+F4,Mitigation Recommendations,"OpenAI API, 4o mini GPT, generates recommendations","Given the top-N CVEs for an asset:
+• produce plain-English impact summaries and step-by-step mitigation roadmaps."
