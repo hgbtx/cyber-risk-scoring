@@ -32,6 +32,3 @@ st.write(
     "* __Improvement__:  \"Improvements to organizational cybersecurity risk management processes, procedures and activities are identified across all CSF Functions\" ([ID.IM](https://csrc.nist.gov/Projects/Cybersecurity-Framework/Filters#/csf/filters:~:text=Improvement%20(ID.IM)%3A%20Improvements%20to%20organizational%20cybersecurity%20risk%20management%20processes%2C%20procedures%20and%20activities%20are%20identified%20across%20all%20CSF%20Functions))\n"
 )
 st.image(r"C:\Users\hgbtx\Desktop\MIS433\final-project\cyber-risk-scoring\img\csf_categories.png")
-# -
-
-
