@@ -1,6 +1,0 @@
-﻿Risk Philosophy,Scoring Formula(s),Aggregation(s),When to Use
-Conservative,Multiplicative,Max,"To only act on high-confidence, multi-dimensional threats"
-Worst-case,Worst Case (Max),Max,To flag any asset with a single severe vulnerability
-Balanced/Pragmatic,"Weighted Average, Simple Mean","Mean, Median","For realistic, overall asset risk monitoring"
-Cumulative,"Simple Mean, Weighted Average",Sum,When interested in total risk exposure per asset
-Outlier-resistant,"Simple Mean, Weighted Average",Median,To ignore rare extremes and focus on typical risks
