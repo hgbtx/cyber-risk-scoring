@@ -135,53 +135,34 @@ if uploaded_file:
                 min_year, max_year = years[0], years[-1]
                 year_range = st.slider("Select Year Range", int(min_year), int(max_year), (int(min_year), int(max_year)))
                 df_f = df[(df['year'] >= year_range[0]) & (df['year'] <= year_range[1])]
-
                 # Pivot table for counts
                 base = df_f.groupby(['month', 'Title'])['cveID'].nunique().reset_index(name='New CVEs')
                 sev = df_f.groupby(['month', 'Title', 'baseSeverity'])['cveID'].nunique().unstack(fill_value=0)
+                # Ensure severity columns present
                 for col in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
                     if col not in sev.columns:
                         sev[col] = 0
+                # Merge
                 monthly_df = base.merge(sev.reset_index(), on=['month', 'Title'])
+                # Sort for MoM calculation
                 monthly_df = monthly_df.sort_values(['Title', 'month'])
+                # Compute MoM % for New CVEs and each severity
                 monthly_df['New CVEs MoM %'] = monthly_df.groupby('Title')['New CVEs'].pct_change().round(4) * 100
                 for col in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
                     monthly_df[f'{col} MoM %'] = monthly_df.groupby('Title')[col].pct_change().round(4) * 100
-
-                # Prepare time series pivot
+                # Display chart first
                 ts_pivot = monthly_df.pivot(index='month', columns='Title', values='New CVEs').fillna(0)
-
-                # Interactive legend via checkboxes
-                assets = sorted(ts_pivot.columns.tolist())
-                select_all = st.checkbox("Select All", value=True)
-                selected_assets = assets if select_all else []
-                if not select_all:
-                    for asset in assets:
-                        if st.checkbox(asset, value=False):
-                            selected_assets.append(asset)
-
-                if not selected_assets:
-                    st.warning("Please select at least one asset to display.")
-                else:
-                    ts_filtered = ts_pivot[selected_assets]
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ts_filtered.plot(ax=ax)
-                    ax.set_xlabel("Month")
-                    ax.set_ylabel("Number of New CVEs")
-                    # Place legend below chart without shrinking the plot area
-                    fig.legend(
-                        labels=ts_filtered.columns,
-                        title='Asset',
-                        loc='lower center'
-                    )
-                    st.pyplot(fig)
-
-                    # Filter underlying data
-                    filtered_monthly = monthly_df[monthly_df['Title'].isin(selected_assets)]
-                    st.subheader("Time Series Data")
-                    st.dataframe(filtered_monthly[['month', 'Title', 'New CVEs', 'New CVEs MoM %',
-                                                 'CRITICAL', 'CRITICAL MoM %', 'HIGH', 'HIGH MoM %',
-                                                 'MEDIUM', 'MEDIUM MoM %', 'LOW', 'LOW MoM %']])
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ts_pivot.plot(ax=ax)
+                ax.set_xlabel("Month")
+                ax.set_ylabel("Number of New CVEs")
+                ax.legend(title='Asset', bbox_to_anchor=(1.05, 1), loc='upper left')
+                st.pyplot(fig)
+                # Display underlying data
+                st.subheader("Time Series Data")
+                st.dataframe(monthly_df[['month', 'Title', 'New CVEs', 'New CVEs MoM %',
+                                         'CRITICAL', 'CRITICAL MoM %', 'HIGH', 'HIGH MoM %',
+                                         'MEDIUM', 'MEDIUM MoM %', 'LOW', 'LOW MoM %']])
             else:
                 st.warning("No valid publication years in data.")
         else:

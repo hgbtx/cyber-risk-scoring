@@ -161,4 +161,3 @@ if uploaded_file is not None:
                 st.info(f"No data available for the selected year range: {year_range[0]}-{year_range[1]}")
         else:
             st.warning("No valid years found in the data.")
-
