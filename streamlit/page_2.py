@@ -1,3 +1,18 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.16.7
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# +
 import time            # Pause execution for rate limiting
 import requests        # HTTP requests library
 import pandas as pd    # DataFrame manipulation
@@ -11,9 +26,9 @@ rate_secs = 1.2
 per_page = 2000
 progress_every = 25
 
-# --- Streamlit UI Setup ---
-
-st.title("Asset Inventory (CPE) & CVE Retrieval")
+# Main page content
+st.markdown("# CPE/CVE Retrieval Tool")
+st.sidebar.markdown("# CPE/CVE Retrieval Tool")
 
 # API key input
 api_key = st.text_input("Enter your NVD API key", type="password")
@@ -258,3 +273,4 @@ if mode == "Run CVE Query" and api_key:
             st.download_button("Download Results as CSV", df.to_csv(index=False), "cve_results.csv")
     else:
         st.warning("Please upload a CPE whitelist or perform a search in 'Search & Save CPEs' mode.")
+
