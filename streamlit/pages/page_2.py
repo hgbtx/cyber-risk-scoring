@@ -81,7 +81,7 @@ if mode == "Search & Save CPEs":
         for uri in df_up.get('cpeName', []).dropna().unique():
             if uri not in st.session_state.cpe_session_list:
                 st.session_state.cpe_session_list.append(uri)
-                title = df_up.loc[df_up['cpeName']==uri, 'Title'].iat[0] if 'Title' in df_up.columns else uri
+                title = df_up.loc[df_up['cpeName']==uri, 'title'].iat[0] if 'title' in df_up.columns else uri
                 st.session_state.cpe_title_map[uri] = title
         st.success(f"Appended {len(df_up)} CPE(s) from CSV.")
 
@@ -125,14 +125,14 @@ if mode == "Search & Save CPEs":
     if st.session_state.cpe_session_list:
         st.write("### CPE Whitelist")
         wl_df = pd.DataFrame([
-            {'Title': st.session_state.cpe_title_map[c], 'cpeName': c}
+            {'title': st.session_state.cpe_title_map[c], 'cpeName': c}
             for c in st.session_state.cpe_session_list
         ])
         wl_df['remove'] = False
         with st.form('remove_form'):
             edited_wl = st.data_editor(
-                wl_df[['remove','Title','cpeName']], use_container_width=True,
-                hide_index=True, key='whitelist_editor', disabled=['Title','cpeName']
+                wl_df[['remove','title','cpeName']], use_container_width=True,
+                hide_index=True, key='whitelist_editor', disabled=['title','cpeName']
             )
             remove_btn = st.form_submit_button("Remove CPE(s) --click twice")
         if remove_btn:
@@ -147,7 +147,7 @@ if mode == "Search & Save CPEs":
 
         # Provide download
         final_wl = pd.DataFrame([
-            {'Title': st.session_state.cpe_title_map[c], 'cpeName': c}
+            {'title': st.session_state.cpe_title_map[c], 'cpeName': c}
             for c in st.session_state.cpe_session_list
         ])
         st.download_button("Download Whitelist as CSV", final_wl.to_csv(index=False), file_name="whitelist.csv")
@@ -261,7 +261,7 @@ if mode == "Run CVE Query" and api_key:
         with tab_wl:
             st.write("### Current CPE Whitelist")
             wl_df = pd.DataFrame([
-                {'Title': st.session_state.cpe_title_map[c], 'cpeName': c}
+                {'title': st.session_state.cpe_title_map[c], 'cpeName': c}
                 for c in st.session_state.cpe_session_list
             ])
             st.dataframe(wl_df)
