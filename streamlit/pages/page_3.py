@@ -114,7 +114,7 @@ if uploaded_file:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
     df['riskScore'] = df.apply(formula_map[formula], axis=1)
-    group = df.groupby('Title')
+    group = df.groupby('title')
     agg_df = (
         group['riskScore']
         .agg(agg_map[aggregation])
@@ -127,7 +127,7 @@ if uploaded_file:
         .reset_index()
         .rename(columns={'riskScore': f'HighRiskCount(>{highrisk_threshold})'})
     )
-    summary = pd.merge(agg_df, highrisk_df, on='Title')
+    summary = pd.merge(agg_df, highrisk_df, on='title')
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Asset Summary", "CVE Summary", "Heatmap", "Severity Distribution", "Time Series"
@@ -145,7 +145,7 @@ if uploaded_file:
 
     with tab2:
         st.subheader("CVE-level Vulnerabilities Summary")
-        vuln_df = df[['Title', 'cveID', 'riskScore']]
+        vuln_df = df[['title', 'cveID', 'riskScore']]
         st.dataframe(vuln_df)
         st.download_button(
             label="Download CVE Summary CSV",
@@ -159,7 +159,7 @@ if uploaded_file:
         top_assets = (
             summary.sort_values(by=f'{aggregation}RiskScore', ascending=False)
             .head(20)
-            .set_index('Title')
+            .set_index('title')
         )
         fig, ax = plt.subplots(figsize=(6, 6))
         sns.heatmap(top_assets[[f'{aggregation}RiskScore']], annot=True, cmap='YlOrRd', cbar=True, ax=ax)
@@ -197,17 +197,17 @@ if uploaded_file:
                 )
                 df_f = df[(df['year'] >= year_range[0]) & (df['year'] <= year_range[1])]
 
-                base = df_f.groupby(['month', 'Title'])['cveID'].nunique().reset_index(name='New CVEs')
-                sev = df_f.groupby(['month', 'Title', 'baseSeverity'])['cveID'].nunique().unstack(fill_value=0)
+                base = df_f.groupby(['month', 'title'])['cveID'].nunique().reset_index(name='New CVEs')
+                sev = df_f.groupby(['month', 'title', 'baseSeverity'])['cveID'].nunique().unstack(fill_value=0)
                 for col in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
                     if col not in sev.columns:
                         sev[col] = 0
-                monthly_df = base.merge(sev.reset_index(), on=['month', 'Title']).sort_values(['Title', 'month'])
-                monthly_df['New CVEs MoM %'] = monthly_df.groupby('Title')['New CVEs'].pct_change().round(4) * 100
+                monthly_df = base.merge(sev.reset_index(), on=['month', 'title']).sort_values(['title', 'month'])
+                monthly_df['New CVEs MoM %'] = monthly_df.groupby('title')['New CVEs'].pct_change().round(4) * 100
                 for col in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
-                    monthly_df[f'{col} MoM %'] = monthly_df.groupby('Title')[col].pct_change().round(4) * 100
+                    monthly_df[f'{col} MoM %'] = monthly_df.groupby('title')[col].pct_change().round(4) * 100
 
-                ts_pivot = monthly_df.pivot(index='month', columns='Title', values='New CVEs').fillna(0)
+                ts_pivot = monthly_df.pivot(index='month', columns='title', values='New CVEs').fillna(0)
 
                 assets = sorted(ts_pivot.columns)
                 # Use multiselect for asset selection
@@ -251,10 +251,10 @@ if uploaded_file:
                     fig.subplots_adjust(hspace=0.2)
                     st.pyplot(fig)
 
-                    filtered_monthly = monthly_df[monthly_df['Title'].isin(selected_assets)]
+                    filtered_monthly = monthly_df[monthly_df['title'].isin(selected_assets)]
                     st.subheader("Time Series Data")
                     st.dataframe(filtered_monthly[[
-                        'month', 'Title', 'New CVEs', 'New CVEs MoM %',
+                        'month', 'title', 'New CVEs', 'New CVEs MoM %',
                         'CRITICAL', 'CRITICAL MoM %', 'HIGH', 'HIGH MoM %',
                         'MEDIUM', 'MEDIUM MoM %', 'LOW', 'LOW MoM %'
                     ]])
