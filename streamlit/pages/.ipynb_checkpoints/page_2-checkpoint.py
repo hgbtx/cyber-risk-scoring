@@ -31,7 +31,7 @@ st.markdown("# CPE/CVE Retrieval Tool")
 st.sidebar.markdown("# CPE/CVE Retrieval Tool")
 
 # API key input
-api_key = NVD_API_KEY
+api_key = st.secrets["NVD_API_KEY"]
 mode = st.radio("Select an action:", ("Search & Save CPEs", "Run CVE Query"))
 
 # Session state initialization
