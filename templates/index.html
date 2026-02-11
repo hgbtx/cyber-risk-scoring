@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Bar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="main-layout">
+        
+        <div class="left-panel-container">
+        <!-- Left Panel -->
+            <!--Drop Zone-->
+            <div class="drop-zone" id="dropZone">
+                <h3>Assets</h3>
+                <div id="selectedItems">
+                    <p id="placeholder" style="color: #999; font-style: italic;">Drag and drop your assets here...</p>
+                </div>
+            </div>
+            <!--CVE Counter-->
+            <div class="cveCounts-container">
+                <div id="cveCounts">0 CVEs found</div>
+            </div>
+        </div>
+
+        <!-- Tab Container -->
+        <div class="tab-container" style="display: flex; flex-direction: column;">
+
+            <div class="tab-header">
+                <button class="tab-button active" data-tab="search">Search</button>
+                <button class="tab-button" data-tab="charts">Charts</button>
+                <button class="tab-button" data-tab="cve">CVE Details</button>
+                <button class="tab-button" data-tab="next-steps">Next Steps</button>
+            </div>
+            <div class="tab-content">
+                <!--Search Tab-->
+                <div class="tab-panel active" data-panel="search">
+                    <h2>Search CPEs</h2>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Search...">
+                        <button id="searchButton">Search</button>
+                    </div>
+                        <div id="resultsContainer" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h2>Results</h2>
+                            <a href="#" id="clearResults">Clear Results</a>
+                        </div>
+                        <div id="resultsList"></div>
+                        <div id="pagination" style="display: none; margin-top: 20px; text-align: center;">
+                            <button id="prevPage" disabled>Previous</button>
+                            <span style="margin: 0 15px;">
+                                Page <input type="text" id="pageInput" min="1" value="1" style="width: 25px; text-align: center;"> of <span id="totalPages"></span>
+                            </span>
+                            <button id="nextPage" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+                <!--Charts Tab-->
+                <div class="tab-panel" data-panel="charts">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2>Charts</h2>
+                        <button id="chartFullscreenToggle" class="chart-fullscreen-btn" style="display: none;" title="Expand chart">&#x26F6;</button>
+                    </div>
+                    <!--Chart Configuration-->
+                    <div id="chartConfig" class="chart-config">
+                        <div class="config-row">
+                            <label for="riskFormulaSelect">Risk Formula</label>
+                            <select id="riskFormulaSelect">
+                                <option value="weighted_average" selected>Weighted Average</option>
+                                <option value="multiplicative">Multiplicative</option>
+                                <option value="max">Max Score</option>
+                                <option value="simple_mean">Simple Mean</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label for="aggMethodSelect">Aggregation Method</label>
+                            <select id="aggMethodSelect">
+                                <option value="max">Max</option>
+                                <option value="mean" selected>Mean</option>
+                                <option value="median">Median</option>
+                                <option value="sum">Sum</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label for="riskThresholdSlider">Risk Threshold: <span id="thresholdValue">7.0</span></label>
+                            <input type="range" id="riskThresholdSlider" min="0" max="10" step="0.5" value="7">
+                        </div>
+                    </div>
+                    <p id="chartPlaceholder" style="color: #999; font-style: italic;">Add assets to generate charts.</p>
+                    <div style="position: relative; width: 100%;">
+                        <canvas id="epssChart" style="display: none;"></canvas>
+                        <canvas id="ciaRadarChart" style="display: none; max-width: 500px;"></canvas>
+                    </div>
+                </div>
+                <!--CVE Tab-->
+                <div class="tab-panel" data-panel="cve">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 600px;">
+                        <h2>CVE Details</h2>
+                    </div>
+                    <div id="cveGrid" class="cve-grid"></div>
+                    <div id="cveFolderView" style="display: none;">
+                        <a href="#" class="cve-folder-back" id="cveFolderBack">← Back to assets</a>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <h3 id="cveFolderTitle"></h3>
+                            <button class="folder-dl-btn" onclick="downloadCveCSV()">CSV</button>
+                            <button class="folder-dl-btn" onclick="downloadCveJSON()">JSON</button>
+                        </div>
+                        <div class="cve-folder-scroll">
+                            <table id="cveFolderTable" class="cve-detail-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="id">CVE ID <span class="sort-arrow"></span></th>
+                                        <th data-sort="published">Published <span class="sort-arrow"></span></th>
+                                        <th data-sort="kev">KEV <span class="sort-arrow"></span></th>
+                                        <th data-sort="epss">EPSS <span class="sort-arrow"></span></th>
+                                        <th data-sort="cwe">CWE <span class="sort-arrow"></span></th>
+                                        <th data-sort="status">Status <span class="sort-arrow"></span></th>
+                                        <th data-sort="tags">Tags <span class="sort-arrow"></span></th>
+                                        <th data-sort="cvss">CVSS <span class="sort-arrow"></span></th>
+                                        <th data-sort="severity">Severity <span class="sort-arrow"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cveFolderBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!--Next Steps Tab-->
+                <div class="tab-panel" data-panel="next-steps">
+                    <h2>Next Steps</h2>
+                </div>
+            </div>
+        </div>
+        <!--Right Panel-->
+        <div class="right-panel-container" style="display: none;">
+            <button id="toggleRightPanel" class="panel-toggle-btn" style="display: none;">&#9654;</button>
+            <div id="rightPanelContent">
+                <!--Vulnerabilities-->
+                <div id="cveContainer" style="display: none;">
+                    <ul id="cveList" style="list-style: none; padding: 0;"></ul>
+                </div>
+                <div id="expandedViewContainer" style="display: none;">
+                    <div id="expandedDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="/static/app.js"></script>
+</html>

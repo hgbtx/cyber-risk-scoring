@@ -1,0 +1,595 @@
+/* =====================
+    BASE/GLOBAL
+======================== */
+
+body {
+    font-family: Calibri;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 15px;
+    gap: 20px;
+    background-color: #F5F5F4;
+}
+
+/* =====================
+    LAYOUT
+======================== */
+
+.main-layout {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    background-color: #F5F5F4;
+    align-items: flex-start;
+}
+
+.left-panel-container{
+    flex: 0 0 200px;
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+}
+
+.right-panel-container {
+    flex: 0 0 400px;
+    padding-top: 100px;
+    width: 100%;
+    position: relative;
+    transition: all 0.03s ease;
+    overflow: hidden;
+}
+
+.right-panel-container.collapsed {
+    flex: 0 0 40px;
+    width: 40px;
+    min-width: 40px;
+    padding-top: 100px;
+    overflow: visible;
+}
+
+.right-panel-container.collapsed #rightPanelContent {
+    display: none;
+}
+
+.panel-toggle-btn {
+    position: absolute;
+    top: 68px;
+    left: 0;
+    background: #d9af6f;
+    color: #57534E;
+    border: none;
+    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 10;
+    transition: background-color 0.2s;
+}
+
+.panel-toggle-btn:hover {
+    background-color: #be7a15;
+    color: white;
+}
+
+.chart-fullscreen-btn {
+    background: #d9af6f;
+    color: #57534E;
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: background-color 0.2s;
+    justify-content: space-between;
+}
+.chart-fullscreen-btn:hover {
+    background-color: #be7a15;
+    color: white;
+}
+
+/* =====================
+    TABS
+======================== */
+
+.tab-container {
+    flex: 1 1 0;
+    margin: 0 auto;
+    padding-top: 25px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.tab-header {
+    display: inline flow-root;
+}
+
+.tab-button {
+    padding: .5rem 3rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #57534E;
+    border-bottom: 3px solid transparent;
+    border-radius: 15px;
+    margin-bottom: -2px;
+    transition: ease 0.01s;
+}
+
+.tab-button:hover {
+    color: #57534E;
+}
+
+.tab-button.active {
+    color: #000;
+    border: 2px solid #d5bf9f;
+}
+
+.tab-content {
+    padding: 2rem;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* =====================
+    SEARCH & PAGINATION
+======================== */
+
+.search-container {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 600px;
+}
+
+#searchInput {
+    padding: 10px 15px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    max-width: 450px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+#searchButton {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #be7a15;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#searchButton:hover {
+    background-color: #d9af6f;
+    color: #57534E;
+}
+
+#resultsContainer {
+    margin-top: 30px;
+    display: block;
+    width: 100%;
+    max-width: 600px;
+}
+
+.result-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    display: block;
+    align-items: center;
+    gap: 10px;
+    cursor: move;
+}
+
+.result-item:hover {
+    background-color: #f5f5f5;
+}
+
+.result-item.dragging {
+    opacity: 0.5;
+}
+
+#pagination button {
+    padding: 8px 16px;
+    font-size: 14px;
+    background-color: #d9af6f;
+    color: #57534E;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#pagination button:hover:not(:disabled) {
+    background-color: #be7a15;
+    color: white;
+}
+
+#pagination button:disabled {
+    background-color: #ddd;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#pageInput {
+    padding: 4px;
+    font-size: 14px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+}
+
+#pageInput:focus {
+    outline: none;
+    border-color: #d9af6f;
+}
+
+/* =====================
+    ASSET SELECTION
+======================== */
+
+.drop-zone {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 40px;
+    background-color: #f5f5f495;
+    max-width: 250px;
+    overflow: hidden;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.drop-zone.drag-over {
+    border-color: #d5bf9f;
+}
+
+.drop-zone h3 {
+    margin-top: 0;
+}
+
+#selectedItems {
+    width: 100%;
+}
+
+.selected-item {
+    padding: 5px;
+    margin-right: 5px;
+    width: 98%;
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    mask-image: linear-gradient(to right, black 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%);
+}
+
+.selected-item div {
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.remove-btn {
+    background-color: #c01e19;
+    color: white;
+    border: none;
+    padding: 2.5px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.remove-btn:hover {
+    background-color: #a21b17;
+}
+
+/* =====================
+    CVE COUNTER
+======================== */
+
+.cveCounts-container {
+    margin-top: 5px; 
+    padding: 5px; 
+    background-color: transparent;
+    justify-self: right;
+}
+
+/* ========================
+    VULNERABILITIES LIST
+=========================== */
+
+#cveContainer {
+    margin-top: 1px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#cveList li {
+    display: block;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#cveList li .cve-count {
+    white-space: nowrap;
+    margin-left: 16px;
+}
+
+.cve-header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 1px 12px;
+}
+
+.cve-toggle {
+    margin-right: 8px;
+    font-size: 0.95em;
+}
+
+.cve-details {
+    display: none;
+    list-style: none;
+    padding: 4px 0 4px 32px;
+    margin: 0;
+}
+
+.cve-details.open {
+    display: block;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.cve-details li {
+    padding: 2px 0;
+    font-size: 1em;
+}
+
+.cve-id-header {
+    cursor: pointer;
+    padding: 2px 0;
+    font-size: 1em;
+}
+
+.cve-id-details {
+    display: none;
+    padding: 4px 0 8px 24px;
+    font-size: 1em;
+}
+
+.cve-id-details.open {
+    display: block;
+}
+
+/* ========================
+    CVE EXPANDED VIEW
+=========================== */
+
+#expandedViewContainer {
+    margin-top: 5px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* ========================
+    CVE GRID
+=========================== */
+
+.cve-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.cve-grid-cell {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: border-color 0.2s, background-color 0.2s;
+    overflow: hidden;
+}
+
+.cve-grid-cell:hover {
+    border-color: #d9af6f;
+    background-color: #f5f0e8;
+}
+
+.cve-grid-cell .cell-title {
+    font-weight: bold;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cve-grid-cell .cell-cpe {
+    font-size: 0.8em;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cve-grid-cell .cell-count {
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 6px;
+}
+
+.cve-folder-back {
+    cursor: pointer;
+    color: #be7a15;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.cve-folder-back:hover {
+    color: #d9af6f;
+}
+
+/* ========================
+    CVE DETAIL TABLE
+=========================== */
+
+.cve-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.cve-detail-table thead th {
+    position: sticky;
+    top: 0;
+    background: #ededed;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 2px solid #ccc;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    font-weight: 600;
+    color: #444;
+}
+
+.cve-detail-table thead th:hover {
+    background: #e0d6c8;
+}
+
+.cve-detail-table thead th .sort-arrow {
+    font-size: 0.7em;
+    margin-left: 4px;
+    color: #999;
+}
+
+.cve-detail-table thead th.sort-asc .sort-arrow::after {
+    content: '▲';
+    color: #be7a15;
+}
+
+.cve-detail-table thead th.sort-desc .sort-arrow::after {
+    content: '▼';
+    color: #be7a15;
+}
+
+.cve-detail-table tbody tr {
+    border-bottom: 1px solid #e8e8e8;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.cve-detail-table tbody tr:hover {
+    background-color: #f5f0e8;
+}
+
+.cve-detail-table tbody tr.selected {
+    background-color: #e8dcc8;
+}
+
+.cve-detail-table td {
+    padding: 6px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.cve-detail-table .kev-yes {
+    color: #c01e19;
+    font-weight: bold;
+}
+
+.cve-detail-table .severity-critical { color: #7b1fa2; font-weight: bold; }
+.cve-detail-table .severity-high { color: #c01e19; font-weight: bold; }
+.cve-detail-table .severity-medium { color: #e67e22; }
+.cve-detail-table .severity-low { color: #50b88e; }
+
+.cve-folder-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.folder-dl-btn {
+    padding: 4px 10px;
+    font-size: 0.8em;
+    background-color: #d9af6f;
+    color: #57534E;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.folder-dl-btn:hover {
+    background-color: #be7a15;
+    color: white;
+}
+
+/* ========================
+    CHART CONFIGURATION
+=========================== */
+
+.chart-config {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+.chart-config .config-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+}
+
+.chart-config label {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #57534E;
+}
+
+.chart-config select {
+    padding: 6px 10px;
+    font-size: 0.9em;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+}
+
+.chart-config select:focus {
+    outline: none;
+    border-color: #d9af6f;
+}
+
+.chart-config input[type="range"] {
+    width: 100%;
+    accent-color: #be7a15;
+    cursor: pointer;
+}
