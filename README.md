@@ -51,7 +51,49 @@ The tool will support _risk assessment_ by:
 
 ## Data Description
 
-The core dataset driving this application is user-defined. Each user ingests CPEs using F1 (Asset Inventory Module) of the tool to generate personalized datasets. In other words, the application itself generates the dataset at runtime rather than relying on a fixed third-party file. This bakes in versatility as a core component. <--- NEEDS UPDATING
+The core dataset driving this application is user-defined. Each user ingests CPEs using Search (F1) to generate personalized datasets. In other words, the application itself generates the dataset at runtime rather than relying on a fixed third-party file. This bakes in versatility as a core component.
+
+### CPE Names
+
+    > cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+
+``cpe names`` follow NIST's version 2.3 naming format and comprise eleven fields:
+1. part: a (application), h (hardware), or o (operating system)
+2. vendor: The organization that makes the product
+3. product: The name of the product
+4. version: The specific version number
+5. update: Any patches or updates applied (e.g., "sp1" for Service Pack 1)
+6. edition: Edition or variant (e.g., "enterprise", "community")
+7. language: Language codes (e.g., "en" for English)
+8. sw_edition: Software edition specifics (e.g., "pro", "home")
+9. target_sw: What software/OS it targets
+10. target_hw: What hardware it targets
+11. other: Miscellaneous other attributes
+
+### CPE Information
+
+    > CPE Title
+    >
+    >"CPE Information"
+    > Deprecated: True/False
+    > CPE Name: cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+    > UUID: unique identifier assigned to each CPE
+    > Last Modified: MM/DD/YYY
+    > Created: MM/DD/YYYY
+    > More Information [https://nvd.nist.gov/products/cpe/detail/{uuid}]
+    > 
+    > References
+    >   References: [hyperlink]
+    >   Type: Advisory/Vendor/etc.
+
+### CVE Names
+
+
+
+### CVE Information
+
+    >
+    >
 
 #### Why This Approach
 * __Tailored Relevance__: Users see only vulnerabilities that apply to their stack - no noise from unrelated products.
@@ -61,36 +103,24 @@ The core dataset driving this application is user-defined. Each user ingests CPE
 
 | Feature ID | Name | Key Component(s) | Features |
 |---|---|---|---|
-| F1 | Search | CPE API, Search engine interface with pagination | Prompts end-user to keyword search an asset (e.g. software, operating system component, hardware)<br>**Returns a list of CPEs (includes partial matches)**<br>Drag and drop results to "Assets" folder in the Left Panel (F5) |
-| F2 | CVE Details | CVE API, CPE folder view of CVEs | Loads CVE data generated in Search (F1)<br>**Returns a list of CVEs**<br>Allows .csv or .json downloads<br>**Sortable columns for CVE list**<br>Selected CVE information displays in the Right Panel (F6) |
-| F3 | Charts | Chart configuration options, Chart generation, Chart interactions | Risk formula, aggregation method, and risk threshold configuration options<br>**CVE data points expands Right Panel (F6) to display CVE information**<br>Togglable chart legend items<br>**Customizable x- and y- parameters**<br>Expand chart size toggle button |
-| F4 | Next Steps | Anthropic Claude, haiku 4.5 | "Tickets" are created automatically for a user to complete<br>**Invisible when no Account (F7) is active - Guest?**|
-| F5 | Left Panel | Drag and drop to "Assets" folder | Drag and drop selected search results into an "Assets" folder<br>**Delete button to remove a CPE from "Asset" folder**<br>Displays a running total of CVEs found |
-| F6 | Right Panel | CVE information display, Collapsible panel | Displays all CVE information returned in API call<br>**Links KEV, CWE, and NVD CVE webpages**<br>Expands automatically when user interacts with CVE data in CVE Details (F2) and Charts (F3)<br>**Collapse button to manually collapse/expand panel**<br>Collapses automatically when Charts (F3) size toggled |
-| F7 | Account | User login, Persistent CPE and CVE data storage, Ticket completion tracking | To be determined |
+| F1 | Search | CPE API, Search engine interface with pagination |<ul> <li>Prompts end-user to keyword search an asset (e.g. software, operating system component, hardware)</li><li>Returns a list of CPEs (includes partial matches)</li><li>Drag and drop results to "Assets" folder in the Left Panel (F5)</li><li>Advanced and simple search options</li></ul> |
+| F2 | CVE Details | CVE API, CPE folder view of CVEs | <ul><li>Loads CVE data generated in Search (F1)</li><li>Returns a list of CVEs</li><li>Allows .csv or .json downloads</li><li>Sortable columns for CVE list</li><li>Selected CVE information displays in the Right Panel (F6)</li></ul> |
+| F3 | Charts | Chart configuration options, Chart generation, Chart interactions | <ul><li>Risk formula, aggregation method, and risk threshold configuration options</li><li>CVE data points expands Right Panel (F6) to display CVE information</li><li>Togglable chart legend items</li><li>Customizable x- and y- parameters</li><li>Expand chart size toggle button</li></ul> |
+| F4 | Next Steps | Anthropic Claude, haiku 4.5 | <ul><li>"Tickets" are created automatically for a user to complete</li><li>Invisible when no Account (F7) is active - Guest?</li></ul>|
+| F5 | Left Panel | Drag and drop to "Assets" folder | <ul><li>Drag and drop selected search results into an "Assets" folder</li><li>Delete button to remove a CPE from "Asset" folder</li><li>Displays a running total of CVEs found</li><ul> |
+| F6 | Right Panel | CVE information display, Collapsible panel | <ul><li>Displays all CVE information returned in API call</li><li>Links KEV, CWE, and NVD CVE webpages</li><li>Expands automatically when user interacts with CVE data in CVE Details (F2) and Charts (F3)</li><li>Collapse button to manually collapse/expand panel</li><li>Collapses automatically when Charts (F3) size toggled</li></ul> |
+| F7 | Account | User login, Persistent CPE and CVE data storage, Ticket completion tracking | <ul><li>To be determined</li></ul> |
 
 ## CPEs Used to Demonstrate Key Features
 
-cpeTitle | cpeName |
-|---|---|
-| Tableau Desktop 2021.1 | cpe:2.3:a:tableau:tableau_desktop:2021.1:*:*:*... |
-| Adobe Acrobat Reader 20.004.30006 Classic Edition | cpe:2.3:a:adobe:acrobat_reader:20.004.30006:*:... |
-| Oracle SuiteCommerce Advanced | cpe:2.3:a:oracle:suitecommerce_advanced:-:*:*:... |
-| Oracle SuiteCommerce Advanced 2020.1.4 | cpe:2.3:a:oracle:suitecommerce_advanced:2020.1... |
-| Alteryx Server 2022.1.1.42590 | cpe:2.3:a:alteryx:alteryx_server:2022.1.1.4259... |
-| Fortinet FortiGate 7000 | cpe:2.3:h:fortinet:fortigate_7000:-:*:*:*:*:*:*:* |
-| Workday 31.2 | cpe:2.3:a:workday:workday:31.2:*:*:*:*:*:*:* |
-| Alfresco Enterprise 4.1.6.13 | cpe:2.3:a:alfresco:alfresco:4.1.6.13:*:*:*:ent... |
-| Oracle Database 19c Enterprise Edition | cpe:2.3:a:oracle:database:19c:*:*:*:enterprise... |
-| Oracle Database Vault 19c | cpe:2.3:a:oracle:database_vault:19c:*:*:*:*:*:*:* |
-| Oracle Database Server 19c | cpe:2.3:a:oracle:database_server:19c:*:*:*:*:*... |
-| Oracle Database Recovery Manager 19c | cpe:2.3:a:oracle:database_recovery_manager:19c... |
-| Microsoft Exchange Server 2019 | cpe:2.3:a:microsoft:exchange_server:2019:-:*:*... |
-| Microsoft Exchange Server 2019 Cumulative Update| cpe:2.3:a:microsoft:exchange_server:2019:cumul... |
+Tests | Feature Name | cpeTitle | cpeName |
+|---|---|---|---|
+| KEV | Right Panel | Sangoma FreePBX 17.0.2 | cpe:2.3:a:sangoma:filestore:17.0.2:*:*:*:*:freepbx:*:* |
+| Tags, Vendor Comments | Right Panel | Open Web Analytics (OWA) 1.2.3 | cpe:2.3:a:openwebanalytics:open_web_analytics:1.2.3:*:*:*:*:*:*:* |
+| Tags, Vendor Comments | Right Panel | Morganstanley Hobbes 2020-05-21 | cpe:2.3:a:morganstanley:hobbes:2020-05-21:*:*:*:*:*:*:* |
+| 🛈 functionality, CPE Info | CVE Details, Right Panel | Sangoma Filestore 17.0.2 for FreePBX | cpe:2.3:a:sangoma:filestore:17.0.2:*:*:*:*:freepbx:*:* |
 
 # __Scope Management__
-
-For the purposes of managing the scope of this application tool:
 
 * In some cases, a CPE can have hundreds (100's) of CVEs
     * especially if the CPE is associated with a well-established product (e.g. Windows products)
@@ -98,9 +128,25 @@ For the purposes of managing the scope of this application tool:
     * improves overall application performance
     * prevents system errors/disruptions
 * Because this search engine is __not__ an exact keyword search, it is recommended that users:
-    * start with vendor name only (e.g. Adobe)
-    * refine search by adding product keyword (e.g. Acrobat)
-    * further refine search by adding version number (e.g. 20.004.30006)
+    * start with vendor, product, and version
+    * refine search by including ``cpe name`` fields defined below.
+
+### CPE Names
+
+    > cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+
+``cpe names`` follow NIST's version 2.3 naming format and comprise eleven fields:
+1. part: a (application), h (hardware), or o (operating system)
+2. vendor: The organization that makes the product
+3. product: The name of the product
+4. version: The specific version number
+5. update: Any patches or updates applied (e.g., "sp1" for Service Pack 1)
+6. edition: Edition or variant (e.g., "enterprise", "community")
+7. language: Language codes (e.g., "en" for English)
+8. sw_edition: Software edition specifics (e.g., "pro", "home")
+9. target_sw: What software/OS it targets
+10. target_hw: What hardware it targets
+11. other: Miscellaneous other attributes
 
 # __F1. Asset Inventory__
 
@@ -114,7 +160,8 @@ Before CVEs can be ingested and processed, ``cpe_names`` must be identified and 
 
 ### Known Issues
 
-* None yet
+* Search results return "No results found." when searching by ``cpe_name``
+    * e.g. cpe:2.3:a:morganstanley:hobbes:2020-05-21:*:*:*:*:*:*:*
 
 
 # __F2. CVE Details__
@@ -131,7 +178,10 @@ Once an ``asset`` has been dropped into the "Assets" ``folder``, the CVE API is 
 
 ## Known Issues
 
-* None yet
+* There should be a link below or CPE Title should be clickable
+    * to expand the right panel to display CPE information
+        * will need to include:
+            * https://nvd.nist.gov/products/cpe/detail/{uuid}
 
 # __F3. Charts__
 
@@ -146,7 +196,7 @@ Charts was designed with an interactive dashboard that generates personalized su
 ### Key Features
 
 #### Risk Formula
-***
+
 | Risk Philosophy | Scoring Formula(s) | Aggregation(s) | When to Use |
 |---|---|---|---|
 | Conservative | Multiplicative | Max | To only act on high-confidence, multi-dimensional threats |
@@ -196,7 +246,7 @@ Charts was designed with an interactive dashboard that generates personalized su
 
 ### Known Issues
 
-* None yet
+* None Yet
 
 # __F6. Right Panel__
 
@@ -208,7 +258,7 @@ Charts was designed with an interactive dashboard that generates personalized su
 
 ### Known Issues
 
-* None yet
+* There is no CPE expanded view to display CPE information
 
 # __F7. Accounts__
 

@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-import time, requests, os
+import time, requests, os, json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -48,17 +48,23 @@ def get_kev_list():
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
+    cpe_match_string = request.json.get('cpeMatchString', '')
     all_results = []
     start_index = 0
     results_per_page = 100
     headers = {"apiKey": nvd_api_key}
     while True:
         params = {
-            "keywordSearch": keyword,
             "resultsPerPage": results_per_page,
             "startIndex": start_index
         }
-        response = requests.get(nvd_api_url, params=params, headers=headers)
+        if cpe_match_string:
+            params["cpeMatchString"] = cpe_match_string
+        elif keyword:
+            params["keywordSearch"] = keyword
+        else:
+            break
+        response = requests.get(nvd_api_url, params=params, headers=headers)        
         if response.status_code != 200:
             print(f"Error fetching data for '{keyword}': {response.status_code} - {response.text}")
             break
@@ -69,11 +75,17 @@ def search_cpe_names():
         indexed_matches = -1
         for item in cpe_matches:
             indexed_matches += 1
-            metadata = item.get('cpe', {}).get('titles', [])
+            cpe_obj = item.get('cpe', {})
+            metadata = cpe_obj.get('titles', [])
             title = next((t['title'] for t in metadata if t.get('lang') == 'en'), metadata[0]['title'] if metadata else '')
-            cpe_uri = item.get('cpe', {}).get('cpeName', '')
+            cpe_uri = cpe_obj.get('cpeName', '')
             if cpe_uri:
-                all_results.append({'index': indexed_matches, 'title': title, 'cpeName': cpe_uri})
+                all_results.append({
+                    'index': indexed_matches,
+                    'title': title,
+                    'cpeName': cpe_uri,
+                    'cpeData': cpe_obj
+                })
         total_results = data.get('totalResults', 0)
         start_index += results_per_page
         if start_index >= total_results:

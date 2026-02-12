@@ -4,6 +4,8 @@
 let allResults = [];
 let currentPage = 1; // Pagination starts at page 1
 let cveDataStore = {}; // Stores CVE data by CPE name
+let cpeDataStore = {}; // Stores CPE metadata by CPE name
+let cpeSearchCache = {}; // Temp cache of CPE data from search results
 let totalCveCount = 0
 let expandedCveData = null; // Stores currently expanded CVE
 let epssChartInstance = null;
@@ -15,6 +17,25 @@ let activeFolderCpe = null;
 let chartRiskFormula = 'weighted_average';
 let chartAggMethod = 'mean';
 let chartRiskThreshold = 7.0;
+
+// =====================
+// DOM REFERENCES
+// =====================
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabPanels = document.querySelectorAll('.tab-panel');
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const dropZone = document.getElementById('dropZone');
+const selectedItems = document.getElementById('selectedItems');
+const leftPanel = document.querySelector('.left-panel-container');
+const resultsContainer = document.getElementById('resultsContainer');
+const resultsList = document.getElementById('resultsList');
+const pagination = document.getElementById('pagination');
+const placeholder = document.getElementById('placeholder');
+const goBackLink = document.getElementById('cveFolderBack');
+const chartFsBtn = document.getElementById('chartFullscreenToggle');
+// Theoretical max: KEV(1000) + EPSS(500) + Age(100) + CVSS(50) + AV(25) + Priv(20) + UI(15) + AC(10) + CIA(24) = 1744
+const PRIORITY_SCORE_MAX = 1744;
 
 // =====================
 // RISK FORMULA & AGGREGATION HELPERS
@@ -60,30 +81,11 @@ function applyAggMethod(values) {
     }
 }
 
-// Theoretical max: KEV(1000) + EPSS(500) + Age(100) + CVSS(50) + AV(25) + Priv(20) + UI(15) + AC(10) + CIA(24) = 1744
-const PRIORITY_SCORE_MAX = 1744;
 // PRIORITY SCORE NORMALIZATION
 function normalizePriorityScore(priorityScore) {
     if (!priorityScore || priorityScore <= 0) return 0;
     return Math.min((priorityScore / PRIORITY_SCORE_MAX) * 10, 10);
 }
-
-// =====================
-// DOM REFERENCES
-// =====================
-const tabButtons = document.querySelectorAll('.tab-button');
-const tabPanels = document.querySelectorAll('.tab-panel');
-const searchInput = document.getElementById('searchInput');
-const searchButton = document.getElementById('searchButton');
-const dropZone = document.getElementById('dropZone');
-const selectedItems = document.getElementById('selectedItems');
-const leftPanel = document.querySelector('.left-panel-container');
-const resultsContainer = document.getElementById('resultsContainer');
-const resultsList = document.getElementById('resultsList');
-const pagination = document.getElementById('pagination');
-const placeholder = document.getElementById('placeholder');
-const goBackLink = document.getElementById('cveFolderBack');
-const chartFsBtn = document.getElementById('chartFullscreenToggle');
 
 // =====================
 // HELPERS
@@ -161,10 +163,91 @@ searchInput.addEventListener('keypress', function(event) {
     }
 });
 
+// ADVANCED SEARCH TOGGLE
+document.getElementById('toggleAdvancedSearch').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('simpleSearch').style.display = 'none';
+    document.getElementById('advancedSearch').style.display = 'block';
+});
+
+document.getElementById('toggleSimpleSearch').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('advancedSearch').style.display = 'none';
+    document.getElementById('simpleSearch').style.display = 'block';
+});
+
+// ADVANCED SEARCH
+async function performAdvancedSearch() {
+    const fields = {
+        part: document.getElementById('advPart').value,
+        vendor: document.getElementById('advVendor').value.trim(),
+        product: document.getElementById('advProduct').value.trim(),
+        version: document.getElementById('advVersion').value.trim(),
+        update: document.getElementById('advUpdate').value.trim(),
+        edition: document.getElementById('advEdition').value.trim(),
+        language: document.getElementById('advLanguage').value.trim(),
+        sw_edition: document.getElementById('advSwEdition').value.trim(),
+        target_sw: document.getElementById('advTargetSw').value.trim(),
+        target_hw: document.getElementById('advTargetHw').value.trim(),
+        other: document.getElementById('advOther').value.trim(),
+    };
+
+    // Build CPE 2.3 match string: cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+    const components = [
+        fields.part || '*',
+        fields.vendor || '*',
+        fields.product || '*',
+        fields.version || '*',
+        fields.update || '*',
+        fields.edition || '*',
+        fields.language || '*',
+        fields.sw_edition || '*',
+        fields.target_sw || '*',
+        fields.target_hw || '*',
+        fields.other || '*',
+    ];
+
+    // Don't search if everything is wildcard
+    if (components.every(c => c === '*')) {
+        alert('Please fill in at least one field.');
+        return;
+    }
+
+    const cpeMatchString = 'cpe:2.3:' + components.join(':');
+
+    const btn = document.getElementById('advSearchButton');
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+
+    try {
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cpeMatchString })
+        });
+        const results = await response.json();
+        displayResults(results);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Search failed. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Search';
+    }
+}
+
+document.getElementById('advSearchButton').addEventListener('click', performAdvancedSearch);
+
 // DISPLAY RESULTS
 function displayResults(results) {
     allResults = results;
     currentPage = 1;
+    // Cache CPE metadata from search results
+    for (const r of results) {
+        if (r.cpeName && r.cpeData) {
+            cpeSearchCache[r.cpeName] = r.cpeData;
+        }
+    }
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
 }
@@ -266,6 +349,7 @@ document.getElementById('clearResults').addEventListener('click', (e) => {
     resultsList.innerHTML = '';
     resultsContainer.style.display = 'none';
     searchInput.value = '';
+    cpeSearchCache = {}; // Clear search cache
 });
 
 // ==============================
@@ -325,6 +409,7 @@ function addSelectedItem(data) {
     itemDiv.querySelector('.remove-btn').addEventListener('click', () => {
         itemDiv.remove();
         delete cveDataStore[itemCpeName]; // Remove CVE data for this CPE
+        delete cpeDataStore[itemCpeName]; // Clean up CPE data
         updateCveCounter(); // Update counter after removing
         renderCveList();
         renderEpssChart();
@@ -336,6 +421,12 @@ function addSelectedItem(data) {
     });
     
     selectedItems.appendChild(itemDiv);
+
+    // Store CPE metadata if available from search cache
+    if (cpeSearchCache[itemCpeName]) {
+        cpeDataStore[itemCpeName] = cpeSearchCache[itemCpeName];
+    }
+
     // Fetch CVEs for this CPE in the background
     fetch('/api/fetch-cves', {
         method: 'POST',
@@ -643,26 +734,48 @@ function renderExpandedView() {
     // Find parent CPE info
     let cpeTitle = 'N/A';
     let cpeName = 'N/A';
+    let cpeInfo = null;
     for (const cpe in cveDataStore) {
         const data = cveDataStore[cpe];
         if (data?.vulnerabilities?.includes(expandedCveData)) {
             cpeTitle = data.title || 'N/A';
             cpeName = cpe;
+            cpeInfo = cpeDataStore[cpe] || null;
             break;
         }
     }
-    
-    const detailLi = document.createElement('li');
 
+    const detailLi = document.createElement('li');
     const cveHeader = document.createElement('div');
     cveHeader.className = 'cve-id-header';
     cveHeader.innerHTML = `<span class="cve-toggle">&#9654;</span> ${escapeHtml(id)}`;
 
-    // --- CVE Information ---
-    let html = `<h3>Asset</h3>
-        <div><strong>Title:</strong> ${escapeHtml(cpeTitle)}</div>
+    // --- CPE Information ---
+    let html = `<h3>${escapeHtml(cpeInfo?.titles?.[0]?.title || cpeTitle)}</h3>
+        <h3>CPE Information</h3>
+        <div><strong>Deprecated:</strong> ${cpeInfo ? escapeHtml(String(cpeInfo.deprecated ?? 'N/A')) : 'N/A'}</div>
         <div><strong>CPE Name:</strong> ${escapeHtml(cpeName)}</div>
-        <h3>CVE Information</h3>
+        <div><strong>UUID:</strong> ${escapeHtml(cpeInfo?.cpeNameId || 'N/A')}</div>
+        <div><strong>Last Modified:</strong> ${escapeHtml(cpeInfo?.lastModified || 'N/A')}</div>
+        <div><strong>Created:</strong> ${escapeHtml(cpeInfo?.created || 'N/A')}</div>`;
+
+    if (cpeInfo?.cpeNameId) {
+        html += `<div><a href="https://nvd.nist.gov/products/cpe/detail/${escapeHtml(cpeInfo.cpeNameId)}" target="_blank" rel="noopener">More Information</a></div>`;
+    }
+
+    // --- CPE References ---
+    const cpeRefs = cpeInfo?.refs || [];
+    if (cpeRefs.length) {
+        html += `<h3>CPE References</h3>`;
+        for (const ref of cpeRefs) {
+            html += `<div><strong>Reference:</strong> <a href="${escapeHtml(ref.ref)}" target="_blank" rel="noopener">${escapeHtml(ref.ref)}</a></div>
+                <div><strong>Type:</strong> ${escapeHtml(ref.type || 'N/A')}</div>
+                <div>---</div>`;
+        }
+    }
+
+    // --- CVE Information ---
+    html += `<h3>CVE Information</h3>
         <div><strong>ID:</strong> ${escapeHtml(id)}</div>
         <div><strong>Source Identifier:</strong> ${escapeHtml(c.sourceIdentifier || 'N/A')}</div>
         <div><strong>Status:</strong> ${escapeHtml(status)}</div>
@@ -833,6 +946,7 @@ function renderCveGrid() {
     const folderView = document.getElementById('cveFolderView');
     grid.innerHTML = '';
     folderView.style.display = 'none';
+    document.getElementById('cpeInfoIcon').style.display = 'none';
     grid.style.display = 'grid';
 
     if (Object.keys(cveDataStore).length > 0) {
@@ -875,6 +989,7 @@ function openCveFolder(cpe, data) {
     grid.style.display = 'none';
     folderView.style.display = 'block';
     activeFolderCpe = cpe;
+    document.getElementById('cpeInfoIcon').style.display = 'inline';
     document.getElementById('cveFolderTitle').textContent = data.title || cpe;
 
     // Store reference for sorting
@@ -916,6 +1031,7 @@ function openAllCveFolder() {
     grid.style.display = 'none';
     folderView.style.display = 'block';
     activeFolderCpe = null;
+    document.getElementById('cpeInfoIcon').style.display = 'none';
     document.getElementById('cveFolderTitle').textContent = 'All CVEs';
 
     folderView.dataset.cpe = '__all__';
@@ -1061,6 +1177,51 @@ document.getElementById('cveFolderBack').addEventListener('click', (e) => {
     // Restore header download buttons
     if (totalCveCount > 0) {
     }
+});
+
+// CPE INFO ICON CLICK
+document.getElementById('cpeInfoIcon').addEventListener('click', () => {
+    const folderView = document.getElementById('cveFolderView');
+    const cpeKey = folderView.dataset.cpe;
+    if (!cpeKey || cpeKey === '__all__') return;
+
+    const panel = document.querySelector('.right-panel-container');
+    panel.style.display = 'block';
+    document.getElementById('toggleRightPanel').style.display = 'block';
+    if (panel.classList.contains('collapsed')) {
+        document.getElementById('toggleRightPanel').click();
+    }
+
+    document.getElementById('cveContainer').style.display = 'none';
+    document.getElementById('expandedViewContainer').style.display = 'block';
+
+    const cpeInfo = cpeDataStore[cpeKey] || cveDataStore[cpeKey]?.cpeData || null;
+    const title = cveDataStore[cpeKey]?.title || cpeKey;
+    const container = document.getElementById('expandedDetails');
+
+    let html = `<h3>${escapeHtml(cpeInfo?.titles?.[0]?.title || title)}</h3>
+        <h3>CPE Information</h3>
+        <div><strong>Deprecated:</strong> ${cpeInfo ? escapeHtml(String(cpeInfo.deprecated ?? 'N/A')) : 'N/A'}</div>
+        <div><strong>CPE Name:</strong> ${escapeHtml(cpeKey)}</div>
+        <div><strong>UUID:</strong> ${escapeHtml(cpeInfo?.cpeNameId || 'N/A')}</div>
+        <div><strong>Last Modified:</strong> ${escapeHtml(cpeInfo?.lastModified || 'N/A')}</div>
+        <div><strong>Created:</strong> ${escapeHtml(cpeInfo?.created || 'N/A')}</div>`;
+
+    if (cpeInfo?.cpeNameId) {
+        html += `<div><a href="https://nvd.nist.gov/products/cpe/detail/${escapeHtml(cpeInfo.cpeNameId)}" target="_blank" rel="noopener">More Information</a></div>`;
+    }
+
+    const cpeRefs = cpeInfo?.refs || [];
+    if (cpeRefs.length) {
+        html += `<h3>CPE References</h3>`;
+        for (const ref of cpeRefs) {
+            html += `<div><strong>Reference:</strong> <a href="${escapeHtml(ref.ref)}" target="_blank" rel="noopener">${escapeHtml(ref.ref)}</a></div>
+                <div><strong>Type:</strong> ${escapeHtml(ref.type || 'N/A')}</div>
+                <div>---</div>`;
+        }
+    }
+
+    container.innerHTML = html;
 });
 
 // =====================

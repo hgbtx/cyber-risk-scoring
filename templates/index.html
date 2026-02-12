@@ -37,11 +37,77 @@
                 <!--Search Tab-->
                 <div class="tab-panel active" data-panel="search">
                     <h2>Search CPEs</h2>
-                    <div class="search-container">
-                        <input type="text" id="searchInput" placeholder="Search...">
-                        <button id="searchButton">Search</button>
+                
+                    <!-- Simple Search -->
+                    <div id="simpleSearch">
+                        <div class="search-container">
+                            <input type="text" id="searchInput" placeholder="Search...">
+                            <button id="searchButton">Search</button>
+                        </div>
+                        <a href="#" id="toggleAdvancedSearch" class="advanced-search-link">Advanced Search</a>
                     </div>
-                        <div id="resultsContainer" style="display: none;">
+                
+                    <!-- Advanced Search -->
+                    <div id="advancedSearch" style="display: none;">
+                        <a href="#" id="toggleSimpleSearch" class="advanced-search-link">&#8592; Simple Search</a>
+                        <div class="advanced-search-grid">
+                            <div class="adv-field">
+                                <label for="advPart">Part</label>
+                                <select id="advPart">
+                                    <option value="" selected>Any</option>
+                                    <option value="a">Application (a)</option>
+                                    <option value="h">Hardware (h)</option>
+                                    <option value="o">Operating System (o)</option>
+                                </select>
+                            </div>
+                            <div class="adv-field">
+                                <label for="advVendor">Vendor</label>
+                                <input type="text" id="advVendor" placeholder="e.g. microsoft">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advProduct">Product</label>
+                                <input type="text" id="advProduct" placeholder="e.g. windows_10">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advVersion">Version</label>
+                                <input type="text" id="advVersion" placeholder="e.g. 1.0.0">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advUpdate">Update</label>
+                                <input type="text" id="advUpdate" placeholder="e.g. sp1">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advEdition">Edition</label>
+                                <input type="text" id="advEdition" placeholder="e.g. enterprise">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advLanguage">Language</label>
+                                <input type="text" id="advLanguage" placeholder="e.g. en">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advSwEdition">Software Edition</label>
+                                <input type="text" id="advSwEdition" placeholder="e.g. pro">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advTargetSw">Target Software</label>
+                                <input type="text" id="advTargetSw" placeholder="e.g. windows">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advTargetHw">Target Hardware</label>
+                                <input type="text" id="advTargetHw" placeholder="e.g. x64">
+                            </div>
+                            <div class="adv-field">
+                                <label for="advOther">Other</label>
+                                <input type="text" id="advOther" placeholder="Miscellaneous">
+                            </div>
+                        </div>
+                        <div class="search-container" style="margin-top: 12px;">
+                            <button id="advSearchButton">Search</button>
+                        </div>
+                    </div>
+
+                    <!--Results Container-->
+                    <div id="resultsContainer" style="display: none;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h2>Results</h2>
                             <a href="#" id="clearResults">Clear Results</a>
@@ -103,6 +169,7 @@
                         <a href="#" class="cve-folder-back" id="cveFolderBack">← Back to assets</a>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <h3 id="cveFolderTitle"></h3>
+                            <span id="cpeInfoIcon" class="cpe-info-icon" title="View CPE Information">&#x1F6C8;</span>
                             <button class="folder-dl-btn" onclick="downloadCveCSV()">CSV</button>
                             <button class="folder-dl-btn" onclick="downloadCveJSON()">JSON</button>
                         </div>

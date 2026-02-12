@@ -237,6 +237,68 @@ body {
     border-color: #d9af6f;
 }
 
+/* Advanced Search */
+.advanced-search-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: #be7a15;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.advanced-search-link:hover {
+    color: #d9af6f;
+}
+
+.advanced-search-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    max-width: 600px;
+}
+
+.adv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.adv-field label {
+    font-size: 0.82em;
+    font-weight: 600;
+    color: #57534E;
+}
+
+.adv-field input,
+.adv-field select {
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+}
+
+.adv-field input:focus,
+.adv-field select:focus {
+    outline: none;
+    border-color: #d9af6f;
+}
+
+#advSearchButton {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #be7a15;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#advSearchButton:hover {
+    background-color: #d9af6f;
+    color: #57534E;
+}
+
 /* =====================
     ASSET SELECTION
 ======================== */
@@ -544,6 +606,17 @@ body {
 .folder-dl-btn:hover {
     background-color: #be7a15;
     color: white;
+}
+
+.cpe-info-icon {
+    cursor: pointer;
+    font-size: 1.1em;
+    color: #be7a15;
+    user-select: none;
+    transition: color 0.2s;
+}
+.cpe-info-icon:hover {
+    color: #d9af6f;
 }
 
 /* ========================
