@@ -29,7 +29,6 @@ Prioritizing cyber resilency starts with understanding an organization's current
 <img src="img/csf_categories.png" alt="broken, booooo">
 
 ## Project Objective 
-------
 
 #### Prototype a tool that supports _asset management_ and _risk assessment_ within the __Identify__ function of NIST's Cybersecurity Framework.
 \
