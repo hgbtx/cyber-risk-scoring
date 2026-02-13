@@ -57,7 +57,7 @@ The core dataset driving this application is user-defined. Each user ingests CPE
 
     > cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
 
-``cpe names`` follow NIST's version 2.3 naming format and comprise eleven fields:
+``cpe_names`` follow NIST's version 2.3 naming format and comprise eleven fields:
 1. part: a (application), h (hardware), or o (operating system)
 2. vendor: The organization that makes the product
 3. product: The name of the product
@@ -129,13 +129,13 @@ Tests | Feature Name | cpeTitle | cpeName |
     * prevents system errors/disruptions
 * Because this search engine is __not__ an exact keyword search, it is recommended that users:
     * start with vendor, product, and version
-    * refine search by including ``cpe name`` fields defined below.
+    * refine search by including ``cpe_name`` fields defined below.
 
 ### CPE Names
 
     > cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
 
-``cpe names`` follow NIST's version 2.3 naming format and comprise eleven fields:
+``cpe_names`` follow NIST's version 2.3 naming format and comprise eleven fields:
 1. part: a (application), h (hardware), or o (operating system)
 2. vendor: The organization that makes the product
 3. product: The name of the product
@@ -184,7 +184,7 @@ Once an ``asset`` has been dropped into the "Assets" ``folder``, the CVE API is 
             * https://nvd.nist.gov/products/cpe/detail/{uuid}
 
 # __F3. Charts__
-
+>>\
 >>_The CSF’s use will vary based on an organization’s unique mission and risks. With an understanding of stakeholder expectations and risk appetite and tolerance (as outlined in GOVERN), an organization can prioritize cybersecurity activities to make informed decisions about cybersecurity expenditures and actions. An organization may choose to handle risk in one or more ways — including mitigating, transferring, avoiding, or accepting negative risks and realizing, sharing, enhancing, or accepting positive risks — depending on the potential impacts and likelihoods. Importantly, an organization can use the CSF both internally to manage its cybersecurity capabilities and externally to oversee or communicate with third parties._
 >>
 >>\- _[National Institute of Standards and Technology (NIST)](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf)_
