@@ -17,6 +17,7 @@
 Organizations must have a framework for how they deal with both attempted and successful cyber attacks. One well-respected model, the NIST Cybersecurity Framework (CSF), explains how to identify attacks, protect systems, detect and respond to threats, and recover from successful attacks. 
 
 Like NIST's CSF, the intended audience for this application tool include individuals:
+>>\
 >>_responsible for developing and leading cybersecurity programs and/or involved in managing risk — including executives, boards of directors, acquisition professionals, technology professionals, risk managers, lawyers, human resources specialists, and cybersecurity and risk management auditors — to guide their cybersecurity-related decisions._
 >>
 >>\- _[National Institute of Standards and Technology (NIST)](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf)_
@@ -86,14 +87,70 @@ The core dataset driving this application is user-defined. Each user ingests CPE
     >   References: [hyperlink]
     >   Type: Advisory/Vendor/etc.
 
-### CVE Names
-
-
-
 ### CVE Information
 
+    > CVE Information
+    >   ID: cve-id
+    >   Source Identifier: 
+    >   Status: Analyzed/Deferred/Rejected
+    >   Published: MM/DD/YYY
+    >   Last Modified: MM/DD/YYYY
+    >   Priority Score: custom formula developed for this tool
+    >   EPSS Score: ingested from EPSS API via [https://www.first.org/epss/api]
+    >   KEV: If True, then [https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve={cve-id}]
+    >   More Information [https://nvd.nist.gov/vuln/detail/{cve-id}]
+
+    > Descriptions
+    >   English
+    >   Spanish
     >
+    > CVE Tags
     >
+    > Metrics
+    >   CVSS v2/3.1/4 Metric
+    >   Source: 
+    >   Base Severity: 
+    >   Base Score: 
+    >   Vector String:
+    >   Attack Vector:
+    >   Attack Complexity:
+    >   Privileges Required:
+    >   User Interaction:
+    >   Scope:
+    >   Confidentiality Impact:
+    >   Integrity Impact:
+    >   Availability Impact:
+    >   Exploitability Score:
+    >   Impact Score:
+    >
+    > Weaknesses
+    >   Source: 
+    >   Type: 
+    >   Weakness: https://cwe.mitre.org/data/definitions/{cwe-num}
+    > ---
+    >
+    > Configurations
+    > Operator: OR | Negate: false
+    > ---
+    >
+    > 1. cpe:2.3:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*
+    >    Match Criteria ID:
+    >    Vulnerable: boolean
+    >    Version Start (incl): 
+    >    Version End (excl): 
+    > 2. cpe:2.3:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*
+    >    Match Criteria ID:
+    >    Vulnerable: boolean
+    >    Version Start (incl): 
+    >    Version End (excl): 
+    > 3. cpe:2.3:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*:\*
+    >    Match Criteria ID:
+    >    Vulnerable: boolean
+    >    Version Start (incl): 
+    >    Version End (excl): 
+    >
+    > References
+    >   Source: source_name | source_link
 
 #### Why This Approach
 * __Tailored Relevance__: Users see only vulnerabilities that apply to their stack - no noise from unrelated products.
@@ -242,11 +299,13 @@ Charts was designed with an interactive dashboard that generates personalized su
 
 ### Features
 
-* None yet
+* Drag and drop "Asset" folder to store selected CPE data
+* Remove button to delete selected CPEs from "Asset" folder
+* Running total count of CVEs found
 
 ### Known Issues
 
-* None Yet
+* Persistent storage of selected items in "Asset" folder  does not exist on ``Ctrl+R`` and ``Ctrl+Shift+R`` page reloads
 
 # __F6. Right Panel__
 
@@ -254,11 +313,22 @@ Charts was designed with an interactive dashboard that generates personalized su
 
 ### Features
 
-* None yet
+* Collapse/expand button to manually toggle panel
+* Populates CPE and CVE information and expands automatically when:
+    * data points are clicked in Charts
+    * CVE list items are clicked in CVE Details folders
+* Populates only CPE information when 🛈 icon is clicked
+    * 🛈 icon displayed next to CPE title in CVE list
+* When True, the following fields link to relevant website page:
+    * KEV
+    * CWE
+    * CPE
+    * CVE
+* EPSS Scores display alongside CVE information
 
 ### Known Issues
 
-* There is no CPE expanded view to display CPE information
+* Right panel contents do not persist according to active tab
 
 # __F7. Accounts__
 
