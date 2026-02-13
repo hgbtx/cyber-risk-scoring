@@ -22,6 +22,66 @@
             <div class="cveCounts-container">
                 <div id="cveCounts">0 CVEs found</div>
             </div>
+            <!--Search Filters-->
+            <div class="filter-panel" id="searchFilterPanel" style="display: none;">
+                <h3>Filters</h3>
+                <div class="filter-fields">
+                    <div class="filter-field">
+                        <label for="filterDeprecated">Deprecated</label>
+                        <select id="filterDeprecated">
+                            <option value="">Any</option>
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterDateFrom">Created From</label>
+                        <input type="date" id="filterDateFrom">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterDateTo">Created To</label>
+                        <input type="date" id="filterDateTo">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterVendor">Vendor</label>
+                        <input type="text" id="filterVendor" placeholder="e.g. microsoft">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterProduct">Product</label>
+                        <input type="text" id="filterProduct" placeholder="e.g. windows">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterVersion">Version</label>
+                        <input type="text" id="filterVersion" placeholder="e.g. 1.0">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterUpdate">Update</label>
+                        <input type="text" id="filterUpdate" placeholder="e.g. sp1">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterEdition">Edition</label>
+                        <input type="text" id="filterEdition" placeholder="e.g. enterprise">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterLanguage">Language</label>
+                        <input type="text" id="filterLanguage" placeholder="e.g. en">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterSwEdition">SW Edition</label>
+                        <input type="text" id="filterSwEdition" placeholder="e.g. pro">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterTargetSw">Target SW</label>
+                        <input type="text" id="filterTargetSw" placeholder="e.g. windows">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterTargetHw">Target HW</label>
+                        <input type="text" id="filterTargetHw" placeholder="e.g. x64">
+                    </div>
+                </div>
+                <button id="applyFilters" class="filter-apply-btn">Apply</button>
+                <a href="#" id="clearFilters" class="advanced-search-link">Clear Filters</a>
+            </div>
         </div>
 
         <!-- Tab Container -->
@@ -49,7 +109,7 @@
                 
                     <!-- Advanced Search -->
                     <div id="advancedSearch" style="display: none;">
-                        <a href="#" id="toggleSimpleSearch" class="advanced-search-link">&#8592; Simple Search</a>
+                        <a href="#" id="toggleSimpleSearch" class="advanced-search-link">&#8592; Go Back to Search</a>
                         <div class="advanced-search-grid">
                             <div class="adv-field">
                                 <label for="advPart">Part</label>

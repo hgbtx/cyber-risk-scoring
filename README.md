@@ -164,7 +164,7 @@ The core dataset driving this application is user-defined. Each user ingests CPE
 | F2 | CVE Details | CVE API, CPE folder view of CVEs | <ul><li>Loads CVE data generated in Search (F1)</li><li>Returns a list of CVEs</li><li>Allows .csv or .json downloads</li><li>Sortable columns for CVE list</li><li>Selected CVE information displays in the Right Panel (F6)</li></ul> |
 | F3 | Charts | Chart configuration options, Chart generation, Chart interactions | <ul><li>Risk formula, aggregation method, and risk threshold configuration options</li><li>CVE data points expands Right Panel (F6) to display CVE information</li><li>Togglable chart legend items</li><li>Customizable x- and y- parameters</li><li>Expand chart size toggle button</li></ul> |
 | F4 | Next Steps | Anthropic Claude, haiku 4.5 | <ul><li>"Tickets" are created automatically for a user to complete</li><li>Invisible when no Account (F7) is active - Guest?</li></ul>|
-| F5 | Left Panel | Drag and drop to "Assets" folder | <ul><li>Drag and drop selected search results into an "Assets" folder</li><li>Delete button to remove a CPE from "Asset" folder</li><li>Displays a running total of CVEs found</li><ul> |
+| F5 | Left Panel | Drag and drop to "Assets" folder | <ul><li>Drag and drop selected search results into an "Assets" folder</li><li>Delete button to remove a CPE from "Asset" folder</li><li>Displays a running total of CVEs found</li><li>Filter options for search results</li><ul> |
 | F6 | Right Panel | CVE information display, Collapsible panel | <ul><li>Displays all CVE information returned in API call</li><li>Links KEV, CWE, and NVD CVE webpages</li><li>Expands automatically when user interacts with CVE data in CVE Details (F2) and Charts (F3)</li><li>Collapse button to manually collapse/expand panel</li><li>Collapses automatically when Charts (F3) size toggled</li></ul> |
 | F7 | Account | User login, Persistent CPE and CVE data storage, Ticket completion tracking | <ul><li>To be determined</li></ul> |
 
@@ -302,10 +302,14 @@ Charts was designed with an interactive dashboard that generates personalized su
 * Drag and drop "Asset" folder to store selected CPE data
 * Remove button to delete selected CPEs from "Asset" folder
 * Running total count of CVEs found
+* Filter Options for Search results when Search tab is active
+* Chart options when Charts tab is active
 
 ### Known Issues
 
 * Persistent storage of selected items in "Asset" folder  does not exist on ``Ctrl+R`` and ``Ctrl+Shift+R`` page reloads
+* Filter options are visible before a search is performed
+* Chart options not yet implemented
 
 # __F6. Right Panel__
 

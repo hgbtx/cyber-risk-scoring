@@ -666,3 +666,74 @@ body {
     accent-color: #be7a15;
     cursor: pointer;
 }
+
+/* ========================
+    SEARCH FILTERS (LEFT PANEL)
+=========================== */
+
+.filter-panel {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 12px;
+    background-color: #f5f5f495;
+    max-width: 250px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.filter-panel h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.filter-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.filter-field label {
+    font-size: 0.78em;
+    font-weight: 600;
+    color: #57534E;
+}
+
+.filter-field input,
+.filter-field select {
+    padding: 5px 7px;
+    font-size: 13px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+    outline: none;
+    border-color: #d9af6f;
+}
+
+.filter-apply-btn {
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-size: 14px;
+    background-color: #be7a15;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.filter-apply-btn:hover {
+    background-color: #d9af6f;
+    color: #57534E;
+}

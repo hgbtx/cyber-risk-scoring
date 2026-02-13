@@ -114,6 +114,11 @@ tabButtons.forEach(button => {
         }
 
         button.classList.add('active');
+        
+        // Show/hide filter panel based on active tab
+        const filterPanel = document.getElementById('searchFilterPanel');
+        filterPanel.style.display = button.dataset.tab === 'search' ? 'block' : 'none';
+        
         const targetPanel = document.querySelector(`.tab-panel[data-panel="${button.dataset.tab}"]`);
         if (targetPanel) targetPanel.classList.add('active');
 
@@ -252,12 +257,19 @@ function displayResults(results) {
     document.getElementById('clearResults').style.display = 'inline';
 }
 
+// SORT RESULTS
+
+
+// FILTER RESULTS
+
+
 // RENDER PAGE
 function renderPage() {
     
     resultsList.innerHTML = '';
+    const displayResults = window._filteredResults || allResults;
     
-    if (allResults.length === 0) {
+    if (displayResults.length === 0) {
         resultsList.innerHTML = '<p>No results found.</p>';
         resultsContainer.style.display = 'block';
         pagination.style.display = 'none';
@@ -266,7 +278,7 @@ function renderPage() {
     
     const startIndex = (currentPage - 1) * resultsPerPage;
     const endIndex = startIndex + resultsPerPage;
-    const pageResults = allResults.slice(startIndex, endIndex);
+    const pageResults = displayResults.slice(startIndex, endIndex);
     
     pageResults.forEach((result) => {
         const div = document.createElement('div');
@@ -291,7 +303,7 @@ function renderPage() {
     resultsContainer.style.display = 'block';
     
     // Update pagination
-    const totalPages = Math.ceil(allResults.length / resultsPerPage);
+    const totalPages = Math.ceil(displayResults.length / resultsPerPage);
     document.getElementById('pageInput').value = currentPage;
     document.getElementById('pageInput').max = totalPages;
     document.getElementById('totalPages').textContent = totalPages;
@@ -1365,6 +1377,112 @@ document.getElementById('riskThresholdSlider').addEventListener('input', (e) => 
     renderCiaRadarChart();
 });
 
+// =====================
+// SEARCH RESULT FILTERS
+// =====================
+
+function parseCpeParts(cpeName) {
+    // cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+    const parts = cpeName.split(':');
+    return {
+        part: parts[2] || '*',
+        vendor: parts[3] || '*',
+        product: parts[4] || '*',
+        version: parts[5] || '*',
+        update: parts[6] || '*',
+        edition: parts[7] || '*',
+        language: parts[8] || '*',
+        sw_edition: parts[9] || '*',
+        target_sw: parts[10] || '*',
+        target_hw: parts[11] || '*',
+    };
+}
+
+function getActiveFilters() {
+    return {
+        deprecated: document.getElementById('filterDeprecated').value,
+        dateFrom: document.getElementById('filterDateFrom').value,
+        dateTo: document.getElementById('filterDateTo').value,
+        vendor: document.getElementById('filterVendor').value.trim().toLowerCase(),
+        product: document.getElementById('filterProduct').value.trim().toLowerCase(),
+        version: document.getElementById('filterVersion').value.trim().toLowerCase(),
+        update: document.getElementById('filterUpdate').value.trim().toLowerCase(),
+        edition: document.getElementById('filterEdition').value.trim().toLowerCase(),
+        language: document.getElementById('filterLanguage').value.trim().toLowerCase(),
+        sw_edition: document.getElementById('filterSwEdition').value.trim().toLowerCase(),
+        target_sw: document.getElementById('filterTargetSw').value.trim().toLowerCase(),
+        target_hw: document.getElementById('filterTargetHw').value.trim().toLowerCase(),
+    };
+}
+
+function applyResultFilters() {
+    const filters = getActiveFilters();
+    const filtered = allResults.filter(r => {
+        const cpeData = r.cpeData || cpeSearchCache[r.cpeName] || {};
+        const parts = parseCpeParts(r.cpeName || '');
+
+        // Deprecated filter
+        if (filters.deprecated !== '') {
+            const isDeprecated = String(cpeData.deprecated ?? false);
+            if (isDeprecated !== filters.deprecated) return false;
+        }
+
+        // Date Created filter
+        if (filters.dateFrom || filters.dateTo) {
+            const created = cpeData.created ? new Date(cpeData.created) : null;
+            if (!created) return false;
+            if (filters.dateFrom && created < new Date(filters.dateFrom)) return false;
+            if (filters.dateTo && created > new Date(filters.dateTo + 'T23:59:59')) return false;
+        }
+
+        // CPE component filters
+        if (filters.vendor && !parts.vendor.toLowerCase().includes(filters.vendor)) return false;
+        if (filters.product && !parts.product.toLowerCase().includes(filters.product)) return false;
+        if (filters.version && !parts.version.toLowerCase().includes(filters.version)) return false;
+        if (filters.update && !parts.update.toLowerCase().includes(filters.update)) return false;
+        if (filters.edition && !parts.edition.toLowerCase().includes(filters.edition)) return false;
+        if (filters.language && !parts.language.toLowerCase().includes(filters.language)) return false;
+        if (filters.sw_edition && !parts.sw_edition.toLowerCase().includes(filters.sw_edition)) return false;
+        if (filters.target_sw && !parts.target_sw.toLowerCase().includes(filters.target_sw)) return false;
+        if (filters.target_hw && !parts.target_hw.toLowerCase().includes(filters.target_hw)) return false;
+
+        return true;
+    });
+
+    // Temporarily swap allResults for rendering, then restore
+    const original = allResults;
+    allResults = filtered;
+    currentPage = 1;
+    renderPage();
+    allResults = original;
+    // Store filtered set for pagination
+    window._filteredResults = filtered;
+}
+
+document.getElementById('applyFilters').addEventListener('click', applyResultFilters);
+
+document.getElementById('clearFilters').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('filterDeprecated').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterVendor').value = '';
+    document.getElementById('filterProduct').value = '';
+    document.getElementById('filterVersion').value = '';
+    document.getElementById('filterUpdate').value = '';
+    document.getElementById('filterEdition').value = '';
+    document.getElementById('filterLanguage').value = '';
+    document.getElementById('filterSwEdition').value = '';
+    document.getElementById('filterTargetSw').value = '';
+    document.getElementById('filterTargetHw').value = '';
+    // Re-render unfiltered
+    currentPage = 1;
+    window._filteredResults = null;
+    renderPage();
+});
+
+// Show filter panel if Search tab is active on load
+document.getElementById('searchFilterPanel').style.display = 'block';
 // =====================
 // 
 // =====================
