@@ -121,6 +121,8 @@ tabButtons.forEach(button => {
         }
 
         button.classList.add('active');
+
+        document.getElementById('chartConfig').style.display = button.dataset.tab === 'charts' ? 'flex' : 'none';
         
         // Show/hide filter panel based on active tab
         const filterPanel = document.getElementById('searchFilterPanel');
