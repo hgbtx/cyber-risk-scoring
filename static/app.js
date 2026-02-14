@@ -256,6 +256,8 @@ document.getElementById('advSearchButton').addEventListener('click', performAdva
 function displayResults(results) {
     allResults = results;
     currentPage = 1;
+    cpeSearchCache = {}; // Clear previous cache before repopulating
+
     // Cache CPE metadata from search results
     for (const r of results) {
         if (r.cpeName && r.cpeData) {
@@ -264,7 +266,6 @@ function displayResults(results) {
     }
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
-    document.getElementById('searchFilterPanel').style.display = 'block';
 }
 
 // SORT RESULTS
@@ -1495,8 +1496,6 @@ document.getElementById('clearFilters').addEventListener('click', (e) => {
 // =====================
 // REMEDIATION TICKETS
 // =====================
-
-
 
 document.getElementById('createTicketBtn').addEventListener('click', () => {
     document.getElementById('ticketFormContainer').style.display = 'block';
