@@ -1569,6 +1569,9 @@ function deleteTicket(id) {
     renderTickets();
 }
 
+// Load persisted tickets on startup
+renderTickets();
+
 // =====================
 // 
 // =====================

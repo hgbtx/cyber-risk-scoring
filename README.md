@@ -272,10 +272,7 @@ Charts was designed with an interactive dashboard that generates personalized su
         * Utilizes custom priority scoring formula
 
 #### Analysis & Visualization
-* Generates
-    * Summary Tables
-    * Heatmap
-    * Time Series
+* None yet
 
 ### Known Issues
 
@@ -308,8 +305,7 @@ Charts was designed with an interactive dashboard that generates personalized su
 ### Known Issues
 
 * Persistent storage of selected items in "Asset" folder  does not exist on ``Ctrl+R`` and ``Ctrl+Shift+R`` page reloads
-* Filter options are visible before a search is performed
-    * Applied filters are not cleared on new search
+* Applied filters are not cleared on new search
 * Chart options not yet implemented
 
 # __F6. Right Panel__
