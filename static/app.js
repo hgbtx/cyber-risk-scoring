@@ -269,6 +269,7 @@ function displayResults(results) {
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
     document.getElementById('searchFilterPanel').style.display = 'block';
+    updateFilterFieldStates();
 }
 
 // RENDER PAGE
@@ -1467,6 +1468,38 @@ function applyResultFilters() {
     allResults = original;
     // Store filtered set for pagination
     window._filteredResults = filtered;
+}
+
+function updateFilterFieldStates() {
+    const fieldMap = {
+        filterDeprecated: r => String(r.cpeData?.deprecated ?? false),
+        filterVendor: r => parseCpeParts(r.cpeName).vendor,
+        filterProduct: r => parseCpeParts(r.cpeName).product,
+        filterVersion: r => parseCpeParts(r.cpeName).version,
+        filterUpdate: r => parseCpeParts(r.cpeName).update,
+        filterEdition: r => parseCpeParts(r.cpeName).edition,
+        filterLanguage: r => parseCpeParts(r.cpeName).language,
+        filterSwEdition: r => parseCpeParts(r.cpeName).sw_edition,
+        filterTargetSw: r => parseCpeParts(r.cpeName).target_sw,
+        filterTargetHw: r => parseCpeParts(r.cpeName).target_hw,
+    };
+
+    for (const [id, extractor] of Object.entries(fieldMap)) {
+        const unique = new Set(allResults.map(extractor));
+        const el = document.getElementById(id);
+        const single = unique.size <= 1;
+        el.disabled = single;
+        el.style.opacity = single ? '0.4' : '1';
+    }
+
+    // Date fields: disable if all created dates are identical
+    const uniqueDates = new Set(allResults.map(r => r.cpeData?.created || ''));
+    const dateSingle = uniqueDates.size <= 1;
+    ['filterDateFrom', 'filterDateTo'].forEach(id => {
+        const el = document.getElementById(id);
+        el.disabled = dateSingle;
+        el.style.opacity = dateSingle ? '0.4' : '1';
+    });
 }
 
 document.getElementById('applyFilters').addEventListener('click', applyResultFilters);
