@@ -254,8 +254,38 @@
                     </div>
                 </div>
                 <!--Next Steps Tab-->
+                <!--Next Steps Tab-->
                 <div class="tab-panel" data-panel="next-steps">
                     <h2>Next Steps</h2>
+                    <div style="margin-bottom: 15px;">
+                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">➕ Create New Ticket</span>
+                    </div>
+                    <div id="ticketFormContainer" style="display: none; max-width: 600px; border: 1px solid #ddd; border-radius: 6px; padding: 16px; background: #fafafa; margin-bottom: 20px;">
+                        <h3 style="margin-top: 0;">New Remediation Ticket</h3>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div>
+                                <label style="font-weight: 600; font-size: 0.85em; color: #57534E;">Description</label>
+                                <textarea id="ticketDescription" rows="4" style="width: 100%; padding: 8px; font-size: 14px; border: 2px solid #ddd; border-radius: 4px; resize: vertical; box-sizing: border-box;" placeholder="Describe the issue to be remediated..."></textarea>
+                            </div>
+                            <div>
+                                <label style="font-weight: 600; font-size: 0.85em; color: #57534E;">Related Feature</label>
+                                <select id="ticketFeature" style="width: 100%; padding: 8px 10px; font-size: 14px; border: 2px solid #ddd; border-radius: 4px; background: white;">
+                                    <option value="" selected>— Select feature —</option>
+                                    <option value="Search">Search</option>
+                                    <option value="Charts">Charts</option>
+                                    <option value="CVE Details">CVE Details</option>
+                                    <option value="Next Steps">Next Steps</option>
+                                    <option value="Left Panel">Left Panel</option>
+                                    <option value="Right Panel">Right Panel</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="submitTicketBtn" style="padding: 8px 20px; background-color: #be7a15; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Submit Ticket</button>
+                                <button id="cancelTicketBtn" style="padding: 8px 20px; background-color: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ticketsList"></div>
                 </div>
             </div>
         </div>

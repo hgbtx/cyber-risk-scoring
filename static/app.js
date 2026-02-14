@@ -17,6 +17,8 @@ let activeFolderCpe = null;
 let chartRiskFormula = 'weighted_average';
 let chartAggMethod = 'mean';
 let chartRiskThreshold = 7.0;
+let tickets = [];
+let ticketIdCounter = 1;
 
 // =====================
 // DOM REFERENCES
@@ -117,7 +119,7 @@ tabButtons.forEach(button => {
         
         // Show/hide filter panel based on active tab
         const filterPanel = document.getElementById('searchFilterPanel');
-        filterPanel.style.display = button.dataset.tab === 'search' ? 'block' : 'none';
+        filterPanel.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'block' : 'none';
         
         const targetPanel = document.querySelector(`.tab-panel[data-panel="${button.dataset.tab}"]`);
         if (targetPanel) targetPanel.classList.add('active');
@@ -255,6 +257,7 @@ function displayResults(results) {
     }
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
+    document.getElementById('searchFilterPanel').style.display = 'block';
 }
 
 // SORT RESULTS
@@ -360,6 +363,7 @@ document.getElementById('clearResults').addEventListener('click', (e) => {
     currentPage = 1;
     resultsList.innerHTML = '';
     resultsContainer.style.display = 'none';
+    document.getElementById('searchFilterPanel').style.display = 'none';
     searchInput.value = '';
     cpeSearchCache = {}; // Clear search cache
 });
@@ -1481,8 +1485,82 @@ document.getElementById('clearFilters').addEventListener('click', (e) => {
     renderPage();
 });
 
-// Show filter panel if Search tab is active on load
-document.getElementById('searchFilterPanel').style.display = 'block';
+// =====================
+// REMEDIATION TICKETS
+// =====================
+
+
+
+document.getElementById('createTicketBtn').addEventListener('click', () => {
+    document.getElementById('ticketFormContainer').style.display = 'block';
+    document.getElementById('ticketDescription').focus();
+});
+
+document.getElementById('cancelTicketBtn').addEventListener('click', () => {
+    document.getElementById('ticketFormContainer').style.display = 'none';
+    document.getElementById('ticketDescription').value = '';
+});
+
+document.getElementById('submitTicketBtn').addEventListener('click', () => {
+    const desc = document.getElementById('ticketDescription').value.trim();
+    const feature = document.getElementById('ticketFeature').value;
+    if (!desc) { alert('Please enter a description.'); return; }
+    if (!feature) { alert('Please select a related feature.'); return; }
+
+    const ticket = {
+        id: ticketIdCounter++,
+        description: desc,
+        created: new Date().toLocaleString(),
+        resolved: false
+    };
+    tickets.push(ticket);
+
+    document.getElementById('ticketDescription').value = '';
+    document.getElementById('ticketFeature').value = '';
+    document.getElementById('ticketFormContainer').style.display = 'none';
+    renderTickets();
+});
+
+function renderTickets() {
+    const container = document.getElementById('ticketsList');
+    container.innerHTML = '';
+
+    if (!tickets.length) return;
+
+    for (const t of tickets) {
+        const div = document.createElement('div');
+        div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
+        div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>Ticket #${t.id}</strong>
+            <span style="font-size: 0.8em; color: #888;">${escapeHtml(t.created)}</span>
+        </div>
+        <div style="margin-top: 4px;">
+            <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600;">${escapeHtml(t.feature)}</span>
+        </div>
+        <p style="margin: 8px 0;">${escapeHtml(t.description)}</p>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            ${t.resolved
+                ? '<span style="color: #2e7d32; font-weight: 600;">✔ Resolved</span>'
+                : `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
+            }
+            <button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>
+        </div>
+    `;
+        container.appendChild(div);
+    }
+}
+
+function resolveTicket(id) {
+    const t = tickets.find(t => t.id === id);
+    if (t) { t.resolved = true; renderTickets(); }
+}
+
+function deleteTicket(id) {
+    tickets = tickets.filter(t => t.id !== id);
+    renderTickets();
+}
+
 // =====================
 // 
 // =====================
