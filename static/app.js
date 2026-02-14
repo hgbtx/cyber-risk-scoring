@@ -252,6 +252,22 @@ async function performAdvancedSearch() {
 
 document.getElementById('advSearchButton').addEventListener('click', performAdvancedSearch);
 
+function parseCpeParts(cpeName) {
+    const parts = cpeName.split(':');
+    return {
+        part: parts[2] || '*',
+        vendor: parts[3] || '*',
+        product: parts[4] || '*',
+        version: parts[5] || '*',
+        update: parts[6] || '*',
+        edition: parts[7] || '*',
+        language: parts[8] || '*',
+        sw_edition: parts[9] || '*',
+        target_sw: parts[10] || '*',
+        target_hw: parts[11] || '*',
+    };
+}
+
 // DISPLAY RESULTS
 function displayResults(results) {
     allResults = results;
@@ -268,6 +284,59 @@ function displayResults(results) {
 
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
+    
+    document.getElementById('searchFilterPanel').style.display = 'block';
+    document.getElementById('clearFilters').click();
+
+    // Convert filter fields to dropdowns when multiple values exist
+    const dropdownFields = {
+        filterVendor: r => parseCpeParts(r.cpeName).vendor,
+        filterProduct: r => parseCpeParts(r.cpeName).product,
+        filterVersion: r => parseCpeParts(r.cpeName).version,
+        filterUpdate: r => parseCpeParts(r.cpeName).update,
+        filterEdition: r => parseCpeParts(r.cpeName).edition,
+        filterLanguage: r => parseCpeParts(r.cpeName).language,
+        filterSwEdition: r => parseCpeParts(r.cpeName).sw_edition,
+        filterTargetSw: r => parseCpeParts(r.cpeName).target_sw,
+        filterTargetHw: r => parseCpeParts(r.cpeName).target_hw,
+    };
+    
+    for (const [id, extractor] of Object.entries(dropdownFields)) {
+        const unique = [...new Set(allResults.map(extractor))].filter(v => v && v !== '*').sort();
+        const parent = document.getElementById(id).parentElement;
+        const label = parent.querySelector('label');
+        const old = document.getElementById(id);
+        const single = unique.length <= 1;
+    
+        const el = document.createElement(single ? 'input' : 'select');
+        el.id = id;
+        if (single) {
+            el.type = 'text';
+            el.disabled = true;
+            el.style.opacity = '0.4';
+            el.placeholder = unique[0] || '';
+        } else {
+            el.innerHTML = '<option value="">Any</option>' +
+                unique.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        }
+        old.replaceWith(el);
+    }
+    
+    // Deprecated field
+    const depUnique = new Set(allResults.map(r => String(r.cpeData?.deprecated ?? false)));
+    const depEl = document.getElementById('filterDeprecated');
+    depEl.disabled = depUnique.size <= 1;
+    depEl.style.opacity = depUnique.size <= 1 ? '0.4' : '1';
+    
+    // Date fields
+    const uniqueDates = new Set(allResults.map(r => r.cpeData?.created || ''));
+    const dateSingle = uniqueDates.size <= 1;
+    ['filterDateFrom', 'filterDateTo'].forEach(id => {
+        const el = document.getElementById(id);
+        el.disabled = dateSingle;
+        el.style.opacity = dateSingle ? '0.4' : '1';
+    });
+    
     document.getElementById('searchFilterPanel').style.display = 'block';
     updateFilterFieldStates();
 }
@@ -1414,15 +1483,15 @@ function getActiveFilters() {
         deprecated: document.getElementById('filterDeprecated').value,
         dateFrom: document.getElementById('filterDateFrom').value,
         dateTo: document.getElementById('filterDateTo').value,
-        vendor: document.getElementById('filterVendor').value.trim().toLowerCase(),
-        product: document.getElementById('filterProduct').value.trim().toLowerCase(),
-        version: document.getElementById('filterVersion').value.trim().toLowerCase(),
-        update: document.getElementById('filterUpdate').value.trim().toLowerCase(),
-        edition: document.getElementById('filterEdition').value.trim().toLowerCase(),
-        language: document.getElementById('filterLanguage').value.trim().toLowerCase(),
-        sw_edition: document.getElementById('filterSwEdition').value.trim().toLowerCase(),
-        target_sw: document.getElementById('filterTargetSw').value.trim().toLowerCase(),
-        target_hw: document.getElementById('filterTargetHw').value.trim().toLowerCase(),
+        vendor: document.getElementById('filterVendor').value.toLowerCase(),
+        product: document.getElementById('filterProduct').value.toLowerCase(),
+        version: document.getElementById('filterVersion').value.toLowerCase(),
+        update: document.getElementById('filterUpdate').value.toLowerCase(),
+        edition: document.getElementById('filterEdition').value.toLowerCase(),
+        language: document.getElementById('filterLanguage').value.toLowerCase(),
+        sw_edition: document.getElementById('filterSwEdition').value.toLowerCase(),
+        target_sw: document.getElementById('filterTargetSw').value.toLowerCase(),
+        target_hw: document.getElementById('filterTargetHw').value.toLowerCase(),
     };
 }
 
