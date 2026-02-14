@@ -17,8 +17,13 @@ let activeFolderCpe = null;
 let chartRiskFormula = 'weighted_average';
 let chartAggMethod = 'mean';
 let chartRiskThreshold = 7.0;
-let tickets = [];
-let ticketIdCounter = 1;
+let tickets = JSON.parse(localStorage.getItem('remediationTickets') || '[]');
+let ticketIdCounter = parseInt(localStorage.getItem('ticketIdCounter') || '1');
+
+function saveTickets() {
+    localStorage.setItem('remediationTickets', JSON.stringify(tickets));
+    localStorage.setItem('ticketIdCounter', ticketIdCounter);
+}
 
 // =====================
 // DOM REFERENCES
@@ -1510,10 +1515,12 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
     const ticket = {
         id: ticketIdCounter++,
         description: desc,
+        feature: feature,
         created: new Date().toLocaleString(),
         resolved: false
     };
     tickets.push(ticket);
+    saveTickets();
 
     document.getElementById('ticketDescription').value = '';
     document.getElementById('ticketFeature').value = '';
@@ -1553,11 +1560,12 @@ function renderTickets() {
 
 function resolveTicket(id) {
     const t = tickets.find(t => t.id === id);
-    if (t) { t.resolved = true; renderTickets(); }
+    if (t) { t.resolved = true; saveTickets(); renderTickets(); }
 }
 
 function deleteTicket(id) {
     tickets = tickets.filter(t => t.id !== id);
+    saveTickets();
     renderTickets();
 }
 
