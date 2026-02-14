@@ -1388,8 +1388,6 @@ document.getElementById('riskThresholdSlider').addEventListener('input', (e) => 
     renderCiaRadarChart();
 });
 
-document.getElementById('chartConfig').style.display = 'none';
-
 // =====================
 // SEARCH RESULT FILTERS
 // =====================

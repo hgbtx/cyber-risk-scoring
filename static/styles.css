@@ -737,3 +737,7 @@ body {
     background-color: #d9af6f;
     color: #57534E;
 }
+
+#chartConfig {
+    display: none;
+}
