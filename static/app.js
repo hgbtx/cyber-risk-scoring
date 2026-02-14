@@ -256,6 +256,7 @@ document.getElementById('advSearchButton').addEventListener('click', performAdva
 function displayResults(results) {
     allResults = results;
     currentPage = 1;
+    document.getElementById('clearFilters').click();
     cpeSearchCache = {}; // Clear previous cache before repopulating
 
     // Cache CPE metadata from search results
@@ -264,15 +265,11 @@ function displayResults(results) {
             cpeSearchCache[r.cpeName] = r.cpeData;
         }
     }
+
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
+    document.getElementById('searchFilterPanel').style.display = 'block';
 }
-
-// SORT RESULTS
-
-
-// FILTER RESULTS
-
 
 // RENDER PAGE
 function renderPage() {
@@ -374,6 +371,7 @@ document.getElementById('clearResults').addEventListener('click', (e) => {
     document.getElementById('searchFilterPanel').style.display = 'none';
     searchInput.value = '';
     cpeSearchCache = {}; // Clear search cache
+    document.getElementById('searchFilterPanel').style.display = 'none';
 });
 
 // ==============================
@@ -1389,9 +1387,9 @@ document.getElementById('riskThresholdSlider').addEventListener('input', (e) => 
     renderCiaRadarChart();
 });
 
-// =====================
+// ======================
 // SEARCH RESULT FILTERS
-// =====================
+// ======================
 
 function parseCpeParts(cpeName) {
     // cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
