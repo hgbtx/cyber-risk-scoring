@@ -57,7 +57,9 @@ function renderTickets() {
                     ? `<span style="color: #2e7d32; font-weight: 600;">✔ Resolved</span><span style="font-size: 0.8em; color: #888; margin-left: 8px;">${escapeHtml(t.resolvedAt || '')}</span>`
                     : `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
                 }
+                ${t.lastModified ? `<span style="font-size: 0.8em; color: #be7a15; margin-left: 8px;">(edited ${escapeHtml(t.lastModified)})</span>` : ''}
             <button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>
+<button onclick="editTicket(${t.id})" style="padding: 4px 12px; background-color: #d9af6f; color: #57534E; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Edit</button>
         </div>
     `;
         container.appendChild(div);
@@ -71,6 +73,56 @@ function resolveTicket(id) {
 
 function deleteTicket(id) {
     tickets = tickets.filter(t => t.id !== id);
+    saveTickets();
+    renderTickets();
+}
+
+function editTicket(id) {
+    const t = tickets.find(t => t.id === id);
+    if (!t) return;
+
+    const container = document.getElementById('ticketsList');
+    const ticketDiv = [...container.children].find(div => div.querySelector('strong')?.textContent === `Ticket #${id}`);
+    if (!ticketDiv) return;
+
+    ticketDiv.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+                <label style="font-weight: 600; font-size: 0.85em; color: #57534E;">Description</label>
+                <textarea id="editDesc_${id}" rows="4" style="width: 100%; padding: 8px; font-size: 14px; border: 2px solid #ddd; border-radius: 4px; resize: vertical; box-sizing: border-box;">${escapeHtml(t.description)}</textarea>
+            </div>
+            <div>
+                <label style="font-weight: 600; font-size: 0.85em; color: #57534E;">Related Feature</label>
+                <select id="editFeature_${id}" style="width: 100%; padding: 8px 10px; font-size: 14px; border: 2px solid #ddd; border-radius: 4px; background: white;">
+                    <option value="" ${!t.feature ? 'selected' : ''}>— Select feature —</option>
+                    <option value="Search" ${t.feature === 'Search' ? 'selected' : ''}>Search</option>
+                    <option value="Charts" ${t.feature === 'Charts' ? 'selected' : ''}>Charts</option>
+                    <option value="CVE Details" ${t.feature === 'CVE Details' ? 'selected' : ''}>CVE Details</option>
+                    <option value="Next Steps" ${t.feature === 'Next Steps' ? 'selected' : ''}>Next Steps</option>
+                    <option value="Left Panel" ${t.feature === 'Left Panel' ? 'selected' : ''}>Left Panel</option>
+                    <option value="Right Panel" ${t.feature === 'Right Panel' ? 'selected' : ''}>Right Panel</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="saveEditTicket(${id})" style="padding: 6px 16px; background-color: #be7a15; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Save</button>
+                <button onclick="renderTickets()" style="padding: 6px 16px; background-color: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Cancel</button>
+            </div>
+        </div>
+    `;
+}
+
+function saveEditTicket(id) {
+    const t = tickets.find(t => t.id === id);
+    if (!t) return;
+
+    const desc = document.getElementById(`editDesc_${id}`).value.trim();
+    const feature = document.getElementById(`editFeature_${id}`).value;
+    if (!desc) { alert('Please enter a description.'); return; }
+    if (!feature) { alert('Please select a related feature.'); return; }
+
+    t.description = desc;
+    t.feature = feature;
+    t.lastModified = new Date().toLocaleString();
     saveTickets();
     renderTickets();
 }

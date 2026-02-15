@@ -356,8 +356,8 @@ def save_tickets():
     conn.execute('DELETE FROM tickets')
     for t in tickets:
         conn.execute(
-            'INSERT INTO tickets (id, description, feature, created, resolved, resolved_at) VALUES (?, ?, ?, ?, ?, ?)',
-            (t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)), t.get('resolvedAt', ''))
+            'INSERT INTO tickets (id, description, feature, created, resolved, resolved_at, lastModified) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)), t.get('resolvedAt', ''), t.get('lastModified', ''))
         )
     conn.commit()
     conn.close()
@@ -373,7 +373,9 @@ def load_tickets():
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],
-        'resolved': bool(r['resolved'])
+        'resolved': bool(r['resolved']),
+        'resolvedAt': r['resolved_at'],
+        'lastModified': r['lastModified'] or ''
     } for r in rows])
 
 def main():
