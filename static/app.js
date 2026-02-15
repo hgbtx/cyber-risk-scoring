@@ -1345,6 +1345,7 @@ chartFsBtn.addEventListener('click', () => {
     document.getElementById('toggleRightPanel').click();
 });
 
+
 // =====================
 // EXPORT (CSV, JSON)
 // =====================
