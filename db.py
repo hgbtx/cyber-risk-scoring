@@ -37,8 +37,6 @@ def init_db():
             feature TEXT,
             created TEXT,
             resolved INTEGER DEFAULT 0,
-            resolved_at TEXT DEFAULT '',
-            lastModified TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
     ''')
