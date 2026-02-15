@@ -1,5 +1,5 @@
 #---CONFIGURATION---
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__)
 
@@ -7,8 +7,11 @@ import time, requests, os, json
 from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
+app.secret_key = os.getenv('SECRET_KEY', os.urandom(32).hex())
 nvd_api_key = os.getenv('NVD_API_KEY')
 nvd_api_url = "https://services.nvd.nist.gov/rest/json/cpes/2.0"
 epss_api_url = "https://api.first.org/data/v1/epss"
@@ -20,6 +23,76 @@ progress_every = 25
 kev_cache = set()
 kev_cache_time = 0
 KEV_CACHE_TTL = 86400  # refresh daily
+
+##---AUTHENTICATION HELPERS---
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def get_current_user_id():
+    return session.get('user_id')
+
+#---AUTHENTICATION ENDPOINTS---
+@app.route('/auth/register', methods=['POST'])
+def register():
+    data = request.json or {}
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters.'}), 400
+    conn = get_db()
+    if conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone():
+        conn.close()
+        return jsonify({'error': 'An account with that email already exists.'}), 409
+    pw_hash = generate_password_hash(password)
+    cursor = conn.execute('INSERT INTO users (email, password_hash) VALUES (?, ?)', (email, pw_hash))
+    conn.commit()
+    user_id = cursor.lastrowid
+    conn.close()
+    session['user_id'] = user_id
+    session['email'] = email
+    session['role'] = 'analyst'
+    return jsonify({'success': True, 'user': {'id': user_id, 'email': email, 'role': 'analyst'}}), 201
+
+@app.route('/auth/login', methods=['POST'])
+def login():
+    data = request.json or {}
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
+    conn = get_db()
+    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+    conn.close()
+    if not user or not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Invalid email or password.'}), 401
+    session['user_id'] = user['id']
+    session['email'] = user['email']
+    session['role'] = user['role']
+    return jsonify({'success': True, 'user': {'id': user['id'], 'email': user['email'], 'role': user['role']}})
+
+@app.route('/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True})
+
+@app.route('/auth/me', methods=['GET'])
+def auth_me():
+    uid = get_current_user_id()
+    if not uid:
+        return jsonify({'authenticated': False}), 401
+    conn = get_db()
+    user = conn.execute('SELECT id, email, role FROM users WHERE id = ?', (uid,)).fetchone()
+    conn.close()
+    if not user:
+        return jsonify({'authenticated': False}), 401
+    return jsonify({'authenticated': True, 'user': dict(user)})
 
 #---FLASK SERVES HTML---
 @app.route('/')
@@ -35,6 +108,7 @@ def parse_date(date_str):
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
+@login_required
 def get_kev_list():
     global kev_cache, kev_cache_time
     if time.time() - kev_cache_time > KEV_CACHE_TTL or not kev_cache:
@@ -44,6 +118,7 @@ def get_kev_list():
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
+@login_required
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
@@ -121,6 +196,7 @@ def fetch_cves_for_cpe(cpe_uri: str) -> list[dict]:
 
 #---NVD CVE FETCH---
 @app.route('/api/fetch-cves', methods=['POST'])
+@login_required
 def api_fetch_cves():
     data = request.json
     cpe_uri = data.get('cpeUri')
@@ -143,7 +219,7 @@ def api_fetch_cves():
     return jsonify({'error': 'No CPE URI provided'}), 400
 
 
-#---FETCH KEV ID VIA NVD API--- 
+#---FETCH KEV ID VIA NVD API---
 def fetch_kev_ids() -> set:
     """Fetch all CVE IDs in CISA's KEV catalog via NVD API."""
     kev_ids = set()
@@ -170,6 +246,8 @@ def fetch_kev_ids() -> set:
     return kev_ids
 
 #---EPSS SCORE FETCH---
+@app.route('/api/fetch-epss', methods=['POST'])
+@login_required
 def fetch_epss_scores(cve_ids: list[str]) -> dict[str, float]:
     """
     Fetch EPSS scores for a list of CVE IDs.
@@ -324,23 +402,27 @@ def count_high_risk(series, threshold=7.0):
 
 #---DATABASE ENDPOINTS---
 @app.route('/db/save-assets', methods=['POST'])
+@login_required
 def save_assets():
+    uid = get_current_user_id()
     assets = request.json.get('assets', [])
     conn = get_db()
-    conn.execute('DELETE FROM assets')
+    conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
     for a in assets:
         conn.execute(
-            'INSERT OR REPLACE INTO assets (cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?)',
-            (a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
+            'INSERT OR REPLACE INTO assets (user_id, cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?, ?)',
+            (uid, a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
         )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
 
 @app.route('/db/load-assets', methods=['GET'])
+@login_required
 def load_assets():
+    uid = get_current_user_id()
     conn = get_db()
-    rows = conn.execute('SELECT * FROM assets').fetchall()
+    rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
     conn.close()
     return jsonify([{
         'cpeName': r['cpeName'],
@@ -350,26 +432,34 @@ def load_assets():
     } for r in rows])
 
 @app.route('/db/save-tickets', methods=['POST'])
+@login_required
 def save_tickets():
+    uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
     conn = get_db()
-    conn.execute('DELETE FROM tickets')
+    conn.execute('DELETE FROM tickets WHERE user_id = ?', (uid,))
     for t in tickets:
-        conn.execute(
-            'INSERT INTO tickets (id, description, feature, created, resolved, resolved_at, lastModified) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            (t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)), t.get('resolvedAt', ''), t.get('lastModified', ''))
-        )
+      conn.execute(
+                  'INSERT INTO tickets (user_id, id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?, ?)',
+                  (uid, t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
+      )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
 
 @app.route('/db/load-tickets', methods=['GET'])
+@login_required
 def load_tickets():
     conn = get_db()
-    rows = conn.execute('SELECT * FROM tickets').fetchall()
+    rows = conn.execute('''
+        SELECT tickets.*, users.email AS creator_email
+        FROM tickets JOIN users ON tickets.user_id = users.id
+    ''').fetchall()
     conn.close()
     return jsonify([{
         'id': r['id'],
+        'user_id': r['user_id'],
+        'creator_email': r['creator_email'],
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],

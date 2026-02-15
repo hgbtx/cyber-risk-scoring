@@ -38,6 +38,7 @@ const goBackLink = document.getElementById('cveFolderBack');
 const chartFsBtn = document.getElementById('chartFullscreenToggle');
 // Theoretical max: KEV(1000) + EPSS(500) + Age(100) + CVSS(50) + AV(25) + Priv(20) + UI(15) + AC(10) + CIA(24) = 1744
 const PRIORITY_SCORE_MAX = 1744;
+const cveCounts = document.getElementById('cveCounts');
 
 // =====================
 // HELPERS HELPERS
@@ -45,10 +46,12 @@ const PRIORITY_SCORE_MAX = 1744;
 
 // SAVE TICKETS TO BACKEND
 function saveTickets() {
+    const uid = currentUser?.id;
+    const myTickets = tickets.filter(t => t.user_id === uid || !t.user_id);
     fetch('/db/save-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tickets })
+        body: JSON.stringify({ tickets: myTickets })
     });
 }
 // SAVE ASSETS TO BACKEND
@@ -89,7 +92,6 @@ async function loadPersistedData() {
             cpeDataStore[a.cpeName] = a.cpeData;
             cveDataStore[a.cpeName] = a.cveData;
             // Rebuild the left-panel item
-            addPersistedAssetItem(a.cpeName, a.title);
         }
         if (data.length) {
             updateCveCounter();
