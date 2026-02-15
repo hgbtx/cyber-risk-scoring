@@ -439,10 +439,10 @@ def save_tickets():
     conn = get_db()
     conn.execute('DELETE FROM tickets WHERE user_id = ?', (uid,))
     for t in tickets:
-      conn.execute(
-                  'INSERT INTO tickets (user_id, id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?, ?)',
-                  (uid, t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
-      )
+        conn.execute(
+            'INSERT INTO tickets (user_id, id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?, ?)',
+            (uid, t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
+        )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -463,9 +463,7 @@ def load_tickets():
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],
-        'resolved': bool(r['resolved']),
-        'resolvedAt': r['resolved_at'],
-        'lastModified': r['lastModified'] or ''
+        'resolved': bool(r['resolved'])
     } for r in rows])
 
 def main():
