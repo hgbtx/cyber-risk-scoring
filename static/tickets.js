@@ -62,7 +62,7 @@ function renderTickets() {
         <div style="display: flex; gap: 8px; align-items: center;">
             ${t.resolved
                 ? '<span style="color: #2e7d32; font-weight: 600;">✔ Resolved</span>'
-                : (isOwner ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>` : '')
+                : `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
             }
             ${isOwner ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
         </div>
