@@ -23,6 +23,14 @@ def init_db():
             created TEXT,
             resolved INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY,
+            description TEXT,
+            feature TEXT,
+            created TEXT,
+            resolved INTEGER DEFAULT 0,
+            resolved_at TEXT DEFAULT ''
+        );
     ''')
     conn.commit()
     conn.close()

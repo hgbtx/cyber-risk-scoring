@@ -53,10 +53,10 @@ function renderTickets() {
         </div>
         <p style="margin: 8px 0;">${escapeHtml(t.description)}</p>
         <div style="display: flex; gap: 8px; align-items: center;">
-            ${t.resolved
-                ? '<span style="color: #2e7d32; font-weight: 600;">✔ Resolved</span>'
-                : `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
-            }
+                ${t.resolved
+                    ? `<span style="color: #2e7d32; font-weight: 600;">✔ Resolved</span><span style="font-size: 0.8em; color: #888; margin-left: 8px;">${escapeHtml(t.resolvedAt || '')}</span>`
+                    : `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
+                }
             <button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>
         </div>
     `;
@@ -66,7 +66,7 @@ function renderTickets() {
 
 function resolveTicket(id) {
     const t = tickets.find(t => t.id === id);
-    if (t) { t.resolved = true; saveTickets(); renderTickets(); }
+    if (t) { t.resolved = true; t.resolvedAt = new Date().toLocaleString(); saveTickets(); renderTickets(); }
 }
 
 function deleteTicket(id) {
