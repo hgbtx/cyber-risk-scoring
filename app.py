@@ -400,7 +400,11 @@ def sum_agg(values):
 def count_high_risk(series, threshold=7.0):
     return (series >= threshold).sum()
 
-#---DATABASE ENDPOINTS---
+#====================
+# DATABASE ENDPOINTS
+#====================
+
+#---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
 @login_required
 def save_assets():
@@ -417,6 +421,7 @@ def save_assets():
     conn.close()
     return jsonify({'success': True})
 
+#---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
 @login_required
 def load_assets():
@@ -431,6 +436,7 @@ def load_assets():
         'cveData': json.loads(r['cveData'])
     } for r in rows])
 
+#---SAVE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
 @login_required
 def save_tickets():
@@ -440,13 +446,16 @@ def save_tickets():
     conn.execute('DELETE FROM tickets WHERE user_id = ?', (uid,))
     for t in tickets:
         conn.execute(
-            'INSERT INTO tickets (user_id, id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?, ?)',
-            (uid, t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
+            'INSERT INTO tickets (user_id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?)',
+            (uid, t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
         )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
 
+
+
+#---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
 def load_tickets():
@@ -466,10 +475,13 @@ def load_tickets():
         'resolved': bool(r['resolved'])
     } for r in rows])
 
+#===========
+# MAIN
+#===========
+
 def main():
     init_db()
     app.run(host='0.0.0.0', debug=True, port=5000)
-
 
 if __name__ == '__main__':
     main()

@@ -55,6 +55,7 @@ function saveTickets() {
         body: JSON.stringify({ tickets: myTickets })
     });
 }
+
 // SAVE ASSETS TO BACKEND
 function saveAssets() {
     const assets = [];

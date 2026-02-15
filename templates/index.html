@@ -145,18 +145,17 @@
 
         <!-- Tab Container -->
         <div class="tab-container" style="display: flex; flex-direction: column;">
-
             <div class="tab-header">
                 <button class="tab-button active" data-tab="search">Search</button>
+                <button class="tab-button" data-tab="cve">Asset Directory</button>
                 <button class="tab-button" data-tab="charts">Charts</button>
-                <button class="tab-button" data-tab="cve">CVE Details</button>
-                <button class="tab-button" data-tab="next-steps">Next Steps</button>
+                <button class="tab-button" data-tab="tickets">myTickets</button>
             </div>
             <div class="tab-content">
+
                 <!--Search Tab-->
                 <div class="tab-panel active" data-panel="search">
                     <h2>Search CPEs</h2>
-                
                     <!-- Simple Search -->
                     <div id="simpleSearch">
                         <div class="search-container">
@@ -165,7 +164,6 @@
                         </div>
                         <a href="#" id="toggleAdvancedSearch" class="advanced-search-link">Advanced Search</a>
                     </div>
-                
                     <!-- Advanced Search -->
                     <div id="advancedSearch" style="display: none;">
                         <a href="#" id="toggleSimpleSearch" class="advanced-search-link">&#8592; Go Back to Search</a>
@@ -224,7 +222,6 @@
                             <button id="advSearchButton">Search</button>
                         </div>
                     </div>
-
                     <!--Results Container-->
                     <div id="resultsContainer" style="display: none;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -241,6 +238,7 @@
                         </div>
                     </div>
                 </div>
+
                 <!--Charts Tab-->
                 <div class="tab-panel" data-panel="charts">
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -253,13 +251,13 @@
                         <canvas id="ciaRadarChart" style="display: none; max-width: 500px;"></canvas>
                     </div>
                 </div>
+
                 <!--CVE Tab-->
                 <div class="tab-panel" data-panel="cve">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 600px;">
-                        <h2>CVE Details</h2>
+                        <h2>Asset Directory</h2>
                         <span id="manageAssetsBtn" style="cursor:pointer; color:#be7a15; font-size:0.9em;">⚙ Manage Assets</span>
                     </div>
-                    <!-- Inside the cve tab-panel, after the h2 wrapper div -->
                     <div id="manageAssetsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:900; justify-content:center; align-items:center;">
                     <div style="background:white; border-radius:8px; padding:24px 32px; max-width:500px; width:90%; max-height:70vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -302,11 +300,12 @@
                         </div>
                     </div>
                 </div>
-                <!--Next Steps Tab-->
-                <div class="tab-panel" data-panel="next-steps">
-                    <h2>Next Steps</h2>
+
+                <!--myTickets Tab-->
+                <div class="tab-panel" data-panel="tickets">
+                    <h2>myTickets</h2>
                     <div style="margin-bottom: 15px;">
-                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">➕ Create New Ticket</span>
+                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">&#65291; Create New Ticket</span>
                     </div>
                     <div id="ticketFormContainer" style="display: none; max-width: 600px; border: 1px solid #ddd; border-radius: 6px; padding: 16px; background: #fafafa; margin-bottom: 20px;">
                         <h3 style="margin-top: 0;">New Remediation Ticket</h3>
@@ -321,8 +320,8 @@
                                     <option value="" selected>— Select feature —</option>
                                     <option value="Search">Search</option>
                                     <option value="Charts">Charts</option>
-                                    <option value="CVE Details">CVE Details</option>
-                                    <option value="Next Steps">Next Steps</option>
+                                    <option value="Asset Directory">Asset Directory</option>
+                                    <option value="myTickets">myTickets</option>
                                     <option value="Left Panel">Left Panel</option>
                                     <option value="Right Panel">Right Panel</option>
                                 </select>
@@ -337,6 +336,7 @@
                 </div>
             </div>
         </div>
+        
         <!--Right Panel-->
         <div class="right-panel-container" style="display: none;">
             <button id="toggleRightPanel" class="panel-toggle-btn" style="display: none;">&#9654;</button>

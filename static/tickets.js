@@ -2,24 +2,25 @@
 // REMEDIATION TICKETS
 // =====================
 
+// CREATE TICKET
 document.getElementById('createTicketBtn').addEventListener('click', () => {
     document.getElementById('ticketFormContainer').style.display = 'block';
     document.getElementById('ticketDescription').focus();
 });
 
+// CANCEL TICKET
 document.getElementById('cancelTicketBtn').addEventListener('click', () => {
     document.getElementById('ticketFormContainer').style.display = 'none';
     document.getElementById('ticketDescription').value = '';
 });
 
+// SUBMIT TICKET
 document.getElementById('submitTicketBtn').addEventListener('click', () => {
     const desc = document.getElementById('ticketDescription').value.trim();
     const feature = document.getElementById('ticketFeature').value;
     if (!desc) { alert('Please enter a description.'); return; }
     if (!feature) { alert('Please select a related feature.'); return; }
     
-
-
     const ticket = {
         id: ticketIdCounter++,
         user_id: currentUser?.id,
@@ -38,6 +39,7 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
     renderTickets();
 });
 
+// RENDER TICKETS
 function renderTickets() {
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
@@ -71,11 +73,13 @@ function renderTickets() {
     }
 }
 
+// RESOLVE TICKETS
 function resolveTicket(id) {
     const t = tickets.find(t => t.id === id);
     if (t) { t.resolved = true; saveTickets(); renderTickets(); }
 }
 
+// DELETE TICKETS
 function deleteTicket(id) {
     tickets = tickets.filter(t => t.id !== id);
     saveTickets();

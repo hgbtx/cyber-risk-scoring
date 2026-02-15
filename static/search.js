@@ -184,9 +184,14 @@ function displayResults(results) {
     }
     
     // Deprecated field
+    
+    // Create a Set of unique deprecated values (converted to strings) from all search results
     const depUnique = new Set(allResults.map(r => String(r.cpeData?.deprecated ?? false)));
+    // Get reference to the deprecated filter dropdown element
     const depEl = document.getElementById('filterDeprecated');
+    // Disable the filter if only 1 unique deprecated value exists (filtering would have no effect)
     depEl.disabled = depUnique.size <= 1;
+    // Reduce opacity to 0.4 if disabled, otherwise 1.0 to visually indicate disabled state
     depEl.style.opacity = depUnique.size <= 1 ? '0.4' : '1';
     
     // Date fields
