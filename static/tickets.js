@@ -76,7 +76,15 @@ function renderTickets() {
 // RESOLVE TICKETS
 function resolveTicket(id) {
     const t = tickets.find(t => t.id === id);
-    if (t) { t.resolved = true; saveTickets(); renderTickets(); }
+    if (t) {
+        t.resolved = true;
+        fetch('/db/ticket-resolution', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticket_id: id, isResolved: 1 })
+        });
+        renderTickets();
+    }
 }
 
 // DELETE TICKETS
