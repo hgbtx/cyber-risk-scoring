@@ -235,10 +235,7 @@ Once an ``asset`` has been dropped into the "Assets" ``folder``, the CVE API is 
 
 ## Known Issues
 
-* There should be a link below or CPE Title should be clickable
-    * to expand the right panel to display CPE information
-        * will need to include:
-            * https://nvd.nist.gov/products/cpe/detail/{uuid}
+* None yet
 
 # __F3. Charts__
 >>\
@@ -305,7 +302,6 @@ Charts was designed with an interactive dashboard that generates personalized su
 ### Known Issues
 
 * Persistent storage of selected items in "Asset" folder  does not exist on ``Ctrl+R`` and ``Ctrl+Shift+R`` page reloads
-* Applied filters are not cleared on new search
 * Chart options not yet implemented
 
 # __F6. Right Panel__
