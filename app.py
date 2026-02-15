@@ -402,23 +402,27 @@ def count_high_risk(series, threshold=7.0):
 
 #---DATABASE ENDPOINTS---
 @app.route('/db/save-assets', methods=['POST'])
+@login_required
 def save_assets():
+    uid = get_current_user_id()
     assets = request.json.get('assets', [])
     conn = get_db()
-    conn.execute('DELETE FROM assets')
+    conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
     for a in assets:
         conn.execute(
-            'INSERT OR REPLACE INTO assets (cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?)',
-            (a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
+            'INSERT OR REPLACE INTO assets (user_id, cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?, ?)',
+            (uid, a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
         )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
 
 @app.route('/db/load-assets', methods=['GET'])
+@login_required
 def load_assets():
+    uid = get_current_user_id()
     conn = get_db()
-    rows = conn.execute('SELECT * FROM assets').fetchall()
+    rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
     conn.close()
     return jsonify([{
         'cpeName': r['cpeName'],
@@ -428,23 +432,27 @@ def load_assets():
     } for r in rows])
 
 @app.route('/db/save-tickets', methods=['POST'])
+@login_required
 def save_tickets():
+    uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
     conn = get_db()
-    conn.execute('DELETE FROM tickets')
+    conn.execute('DELETE FROM tickets WHERE user_id = ?', (uid,))
     for t in tickets:
         conn.execute(
-            'INSERT INTO tickets (id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?)',
-            (t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
+            'INSERT INTO tickets (user_id, id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?, ?)',
+            (uid, t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
         )
     conn.commit()
     conn.close()
     return jsonify({'success': True})
 
 @app.route('/db/load-tickets', methods=['GET'])
+@login_required
 def load_tickets():
+    uid = get_current_user_id()
     conn = get_db()
-    rows = conn.execute('SELECT * FROM tickets').fetchall()
+    rows = conn.execute('SELECT * FROM tickets WHERE user_id = ?', (uid,)).fetchall()
     conn.close()
     return jsonify([{
         'id': r['id'],
