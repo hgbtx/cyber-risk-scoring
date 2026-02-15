@@ -39,6 +39,14 @@ def init_db():
             resolved INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS resolvedTickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL,
+        resolved TEXT,
+        isResolved INTEGER DEFAULT 0,
+        FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+    );
     ''')
     conn.commit()
     conn.close()

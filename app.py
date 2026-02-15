@@ -453,7 +453,42 @@ def save_tickets():
     conn.close()
     return jsonify({'success': True})
 
+#---SAVE RESOLVED TICKETS---
+@app.route('/db/ticket-resolution', methods=['POST'])
+@login_required
+def ticket_resolution():
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    is_resolved = data.get('isResolved', 0)
 
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    resolved_ts = None
+    if is_resolved:
+        resolved_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+    existing = conn.execute('SELECT id FROM resolvedTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
+    if existing:
+        conn.execute(
+            'UPDATE resolvedTickets SET resolved = ?, isResolved = ? WHERE ticket_id = ?',
+            (resolved_ts, int(is_resolved), ticket_id)
+        )
+    else:
+        conn.execute(
+            'INSERT INTO resolvedTickets (ticket_id, resolved, isResolved) VALUES (?, ?, ?)',
+            (ticket_id, resolved_ts, int(is_resolved))
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'isResolved': is_resolved, 'resolved': resolved_ts})
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
