@@ -11,6 +11,7 @@ function renderEpssChart() {
     const dataPoints = [];
     
     for (const cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;
         const data = cveDataStore[cpe];
         if (!data?.vulnerabilities) continue;
         
@@ -135,6 +136,7 @@ function renderCiaRadarChart() {
     const assetProfiles = {};
 
     for (const cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;
         const data = cveDataStore[cpe];
         if (!data?.vulnerabilities?.length) continue;
     

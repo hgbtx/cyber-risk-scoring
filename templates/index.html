@@ -257,6 +257,21 @@
                 <div class="tab-panel" data-panel="cve">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 600px;">
                         <h2>CVE Details</h2>
+                        <span id="manageAssetsBtn" style="cursor:pointer; color:#be7a15; font-size:0.9em;">⚙ Manage Assets</span>
+                    </div>
+                    <!-- Inside the cve tab-panel, after the h2 wrapper div -->
+                    <div id="manageAssetsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:900; justify-content:center; align-items:center;">
+                    <div style="background:white; border-radius:8px; padding:24px 32px; max-width:500px; width:90%; max-height:70vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">Manage Assets</h3>
+                        <span id="closeManageAssets" style="cursor:pointer; font-size:1.3em; color:#888;">&times;</span>
+                        </div>
+                        <p style="font-size:0.85em; color:#666;">Delete or archive assets. Archived assets are hidden from CVE Details and Charts but can be restored.</p>
+                        <div id="manageAssetsList"></div>
+                        <div style="margin-top:14px; text-align:right;">
+                        <button id="showArchivedToggle" style="padding:6px 14px; font-size:0.85em; background:none; border:1px solid #ccc; border-radius:4px; cursor:pointer;">Show Archived</button>
+                        </div>
+                    </div>
                     </div>
                     <div id="cveGrid" class="cve-grid"></div>
                     <div id="cveFolderView" style="display: none;">
@@ -351,4 +366,5 @@
     <script src="/static/filters.js"></script>
     <script src="/static/export.js"></script>
     <script src="/static/tickets.js"></script>
+    <script src="/static/manage.js"></script>
 </html>

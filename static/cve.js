@@ -6,6 +6,7 @@
 function updateCveCounter() {
     totalCveCount = 0;
     for (let cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;
         if (cveDataStore[cpe] && cveDataStore[cpe].count) {
             totalCveCount += cveDataStore[cpe].count;
         }
@@ -279,8 +280,8 @@ function renderCveGrid() {
     }
 
     for (const cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;  // ← add this
         const data = cveDataStore[cpe];
-        if (data?.count === undefined) continue;
 
         const cell = document.createElement('div');
         cell.className = 'cve-grid-cell';
