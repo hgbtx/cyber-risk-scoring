@@ -450,12 +450,16 @@ def save_tickets():
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
 def load_tickets():
-    uid = get_current_user_id()
     conn = get_db()
-    rows = conn.execute('SELECT * FROM tickets WHERE user_id = ?', (uid,)).fetchall()
+    rows = conn.execute('''
+        SELECT tickets.*, users.email AS creator_email
+        FROM tickets JOIN users ON tickets.user_id = users.id
+    ''').fetchall()
     conn.close()
     return jsonify([{
         'id': r['id'],
+        'user_id': r['user_id'],
+        'creator_email': r['creator_email'],
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],
