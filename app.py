@@ -20,8 +20,6 @@ kev_cache = set()
 kev_cache_time = 0
 KEV_CACHE_TTL = 86400  # refresh daily
 
-
-
 #---FLASK SERVES HTML---
 @app.route('/')
 def home():
