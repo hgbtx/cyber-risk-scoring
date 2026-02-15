@@ -6,6 +6,7 @@ app = Flask(__name__)
 import time, requests, os, json
 from datetime import datetime
 from dotenv import load_dotenv
+from db import get_db, init_db
 
 load_dotenv()
 nvd_api_key = os.getenv('NVD_API_KEY')
@@ -321,7 +322,62 @@ def sum_agg(values):
 def count_high_risk(series, threshold=7.0):
     return (series >= threshold).sum()
 
+#---DATABASE ENDPOINTS---
+@app.route('/db/save-assets', methods=['POST'])
+def save_assets():
+    assets = request.json.get('assets', [])
+    conn = get_db()
+    conn.execute('DELETE FROM assets')
+    for a in assets:
+        conn.execute(
+            'INSERT OR REPLACE INTO assets (cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?)',
+            (a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/db/load-assets', methods=['GET'])
+def load_assets():
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM assets').fetchall()
+    conn.close()
+    return jsonify([{
+        'cpeName': r['cpeName'],
+        'title': r['title'],
+        'cpeData': json.loads(r['cpeData']),
+        'cveData': json.loads(r['cveData'])
+    } for r in rows])
+
+@app.route('/db/save-tickets', methods=['POST'])
+def save_tickets():
+    tickets = request.json.get('tickets', [])
+    conn = get_db()
+    conn.execute('DELETE FROM tickets')
+    for t in tickets:
+        conn.execute(
+            'INSERT INTO tickets (id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?)',
+            (t['id'], t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/db/load-tickets', methods=['GET'])
+def load_tickets():
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM tickets').fetchall()
+    conn.close()
+    return jsonify([{
+        'id': r['id'],
+        'description': r['description'],
+        'feature': r['feature'],
+        'created': r['created'],
+        'resolved': bool(r['resolved'])
+    } for r in rows])
+
 def main():
+    init_db()
     app.run(host='0.0.0.0', debug=True, port=5000)
 
 

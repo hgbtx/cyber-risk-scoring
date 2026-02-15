@@ -17,13 +17,8 @@ let activeFolderCpe = null;
 let chartRiskFormula = 'weighted_average';
 let chartAggMethod = 'mean';
 let chartRiskThreshold = 7.0;
-let tickets = JSON.parse(localStorage.getItem('remediationTickets') || '[]');
-let ticketIdCounter = parseInt(localStorage.getItem('ticketIdCounter') || '1');
-
-function saveTickets() {
-    localStorage.setItem('remediationTickets', JSON.stringify(tickets));
-    localStorage.setItem('ticketIdCounter', ticketIdCounter);
-}
+let tickets = [];
+let ticketIdCounter = 1;
 
 // =====================
 // DOM REFERENCES
@@ -45,8 +40,65 @@ const chartFsBtn = document.getElementById('chartFullscreenToggle');
 const PRIORITY_SCORE_MAX = 1744;
 
 // =====================
-// RISK FORMULA & AGGREGATION HELPERS
+// HELPERS HELPERS
 // =====================
+
+// SAVE TICKETS TO BACKEND
+function saveTickets() {
+    fetch('/db/save-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickets })
+    });
+}
+// SAVE ASSETS TO BACKEND
+function saveAssets() {
+    const assets = [];
+    for (const cpeName in cveDataStore) {
+        assets.push({
+            cpeName,
+            title: cveDataStore[cpeName]?.title || '',
+            cpeData: cpeDataStore[cpeName] || {},
+            cveData: cveDataStore[cpeName] || {}
+        });
+    }
+    fetch('/db/save-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assets })
+    });
+}
+// LOAD PERSISTED DATA ON STARTUP
+async function loadPersistedData() {
+    // Load tickets
+    try {
+        const res = await fetch('/db/load-tickets');
+        const data = await res.json();
+        if (data.length) {
+            tickets = data;
+            ticketIdCounter = Math.max(...data.map(t => t.id)) + 1;
+            renderTickets();
+        }
+    } catch (e) { console.error('Failed to load tickets:', e); }
+
+    // Load assets
+    try {
+        const res = await fetch('/db/load-assets');
+        const data = await res.json();
+        for (const a of data) {
+            cpeDataStore[a.cpeName] = a.cpeData;
+            cveDataStore[a.cpeName] = a.cveData;
+            // Rebuild the left-panel item
+            addPersistedAssetItem(a.cpeName, a.title);
+        }
+        if (data.length) {
+            updateCveCounter();
+            renderCveList();
+            renderEpssChart();
+            renderCiaRadarChart();
+        }
+    } catch (e) { console.error('Failed to load assets:', e); }
+}
 
 // RISK FORMULA HELPER
 function applyRiskFormula(values, weights) {
@@ -95,7 +147,7 @@ function normalizePriorityScore(priorityScore) {
 }
 
 // =====================
-// HELPERS
+// SECURITY HELPERS
 // =====================
 
 // HTML ESCAPING TO PREVENT XSS IN DYNAMIC CONTENT
