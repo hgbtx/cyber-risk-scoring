@@ -28,6 +28,16 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(user_id, cpeName)
         );
+        
+        CREATE TABLE IF NOT EXISTS archivedAssets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            archived TEXT,
+            isArchived INTEGER DEFAULT 0,
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
 
         CREATE TABLE IF NOT EXISTS tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,9 +53,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS resolvedTickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
             resolved TEXT,
             isResolved INTEGER DEFAULT 0,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
     ''')
     conn.commit()
