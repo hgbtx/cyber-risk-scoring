@@ -35,7 +35,7 @@ def init_db():
             user_id INTEGER NOT NULL,
             archived TEXT,
             isArchived INTEGER DEFAULT 0,
-            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
