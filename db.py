@@ -30,24 +30,13 @@ def init_db():
             UNIQUE(user_id, cpeName)
         );
 
-        CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            description TEXT,
-            feature TEXT,
-            created TEXT,
-            isResolved INTEGER DEFAULT 0,
-            resolved TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-
         CREATE TABLE IF NOT EXISTS resolvedTickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ticket_id INTEGER NOT NULL,
-        resolved TEXT,
-        isResolved INTEGER DEFAULT 0,
-        FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
-    );
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            resolved TEXT,
+            isResolved INTEGER DEFAULT 0,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+        );
     ''')
     conn.commit()
     conn.close()
