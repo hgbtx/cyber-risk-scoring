@@ -411,12 +411,26 @@ def save_assets():
     uid = get_current_user_id()
     assets = request.json.get('assets', [])
     conn = get_db()
-    conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
+
+    # Upsert each asset (preserves existing IDs)
+    incoming_cpes = set()
     for a in assets:
-        conn.execute(
-            'INSERT OR REPLACE INTO assets (user_id, cpeName, title, cpeData, cveData) VALUES (?, ?, ?, ?, ?)',
-            (uid, a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{})))
-        )
+        incoming_cpes.add(a['cpeName'])
+        conn.execute('''
+            INSERT INTO assets (user_id, cpeName, title, cpeData, cveData)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, cpeName)
+            DO UPDATE SET title=excluded.title, cpeData=excluded.cpeData, cveData=excluded.cveData
+        ''', (uid, a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{}))))
+
+    # Remove assets no longer present
+    if incoming_cpes:
+        placeholders = ','.join('?' * len(incoming_cpes))
+        conn.execute(f'DELETE FROM assets WHERE user_id = ? AND cpeName NOT IN ({placeholders})',
+                     (uid, *incoming_cpes))
+    else:
+        conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
+
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -496,12 +510,31 @@ def save_tickets():
     uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
     conn = get_db()
-    conn.execute('DELETE FROM tickets WHERE user_id = ?', (uid,))
+
+    incoming_ids = set()
     for t in tickets:
-        conn.execute(
-            'INSERT INTO tickets (user_id, description, feature, created, resolved) VALUES (?, ?, ?, ?, ?)',
-            (uid, t['description'], t['feature'], t['created'], int(t.get('resolved', False)))
-        )
+        tid = t.get('id')
+        is_resolved = int(t.get('isResolved') or 0)
+        if tid:
+            incoming_ids.add(tid)
+            conn.execute('''
+                INSERT INTO tickets (id, user_id, description, feature, created, isResolved)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id)
+                DO UPDATE SET description=excluded.description, feature=excluded.feature, isResolved=excluded.isResolved
+            ''', (tid, uid, t['description'], t['feature'], t['created'], is_resolved))
+        else:
+            cursor = conn.execute(
+                'INSERT INTO tickets (user_id, description, feature, created, isResolved) VALUES (?, ?, ?, ?, ?)',
+                (uid, t['description'], t['feature'], t['created'], is_resolved)
+            )
+            incoming_ids.add(cursor.lastrowid)
+
+    id_list = tuple(incoming_ids) or (0,)
+    placeholders = ','.join('?' * len(id_list))
+    conn.execute(f'DELETE FROM tickets WHERE user_id = ? AND id NOT IN ({placeholders})',
+                 (uid, *id_list))
+
     conn.commit()
     conn.close()
     return jsonify({'success': True})
