@@ -2,19 +2,23 @@
 // MANAGE ASSETS MODAL
 // =====================
 
+// MANAGE ASSETS BUTTON
 document.getElementById('manageAssetsBtn').addEventListener('click', () => {
     renderManageAssetsList(false);
     document.getElementById('manageAssetsModal').style.display = 'flex';
 });
 
+// CLOSE MODAL
 document.getElementById('closeManageAssets').addEventListener('click', () => {
     document.getElementById('manageAssetsModal').style.display = 'none';
 });
 
+// CLOSE WHEN CLICKING OUTSIDE CONTENT
 document.getElementById('manageAssetsModal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
 });
 
+// TOGGLE ARCHIVED ASSETS
 document.getElementById('showArchivedToggle').addEventListener('click', function () {
     const showing = this.dataset.showing === 'true';
     this.dataset.showing = showing ? 'false' : 'true';
@@ -22,6 +26,7 @@ document.getElementById('showArchivedToggle').addEventListener('click', function
     renderManageAssetsList(!showing);
 });
 
+// RENDER ASSETS IN MANAGE MODAL
 function renderManageAssetsList(showArchived) {
     const container = document.getElementById('manageAssetsList');
     container.innerHTML = '';
@@ -95,6 +100,7 @@ function renderManageAssetsList(showArchived) {
     });
 }
 
+// REFRESH DEPENDENCIES
 function refreshAfterManage() {
     updateCveCounter();
     renderCveGrid();

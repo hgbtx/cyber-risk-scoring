@@ -421,6 +421,44 @@ def save_assets():
     conn.close()
     return jsonify({'success': True})
 
+#---ARCHIVE ASSETS---
+@app.route('/db/archived-assets', methods=['POST'])
+@login_required
+def archive_asset():
+    uid = get_current_user_id()
+    data = request.json or {}
+    cpe_name = data.get('cpeName')
+    is_archived = data.get('isArchived', 1)
+
+    if not cpe_name:
+        return jsonify({'error': 'cpeName is required'}), 400
+
+    conn = get_db()
+    asset = conn.execute('SELECT id FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
+    if not asset:
+        conn.close()
+        return jsonify({'error': 'Asset not found'}), 404
+
+    archived_ts = None
+    if is_archived:
+        archived_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+    existing = conn.execute('SELECT id FROM archivedAssets WHERE asset_id = ? AND user_id = ?', (asset['id'], uid)).fetchone()
+    if existing:
+        conn.execute(
+            'UPDATE archivedAssets SET archived = ?, isArchived = ? WHERE asset_id = ? AND user_id = ?',
+            (archived_ts, int(is_archived), asset['id'], uid)
+        )
+    else:
+        conn.execute(
+            'INSERT INTO archivedAssets (asset_id, user_id, archived, isArchived) VALUES (?, ?, ?, ?)',
+            (asset['id'], uid, archived_ts, int(is_archived))
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'cpeName': cpe_name, 'isArchived': is_archived, 'archived': archived_ts})
+
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
 @login_required
