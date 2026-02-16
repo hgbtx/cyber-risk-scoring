@@ -5,7 +5,6 @@ DB_PATH = os.path.join(os.path.dirname(__file__), 'app.db')
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
 def init_db():
@@ -28,6 +27,17 @@ def init_db():
             cveData TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             UNIQUE(user_id, cpeName)
+        );
+
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            description TEXT,
+            feature TEXT,
+            created TEXT,
+            isResolved INTEGER DEFAULT 0,
+            resolved TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS resolvedTickets (

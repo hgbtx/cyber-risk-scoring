@@ -496,8 +496,12 @@ def ticket_resolution():
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
-        SELECT tickets.*, users.email AS creator_email
-        FROM tickets JOIN users ON tickets.user_id = users.id
+        SELECT tickets.*, users.email AS creator_email,
+            resolvedTickets.resolved AS rt_resolved,
+            resolvedTickets.isResolved AS rt_isResolved
+        FROM tickets
+        JOIN users ON tickets.user_id = users.id
+        LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
     ''').fetchall()
     conn.close()
     return jsonify([{
@@ -507,7 +511,8 @@ def load_tickets():
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],
-        'resolved': bool(r['resolved'])
+        'resolved': r['rt_resolved'] if r['rt_isResolved'] else None,
+        'isResolved': bool(r['rt_isResolved']) if r['rt_isResolved'] is not None else bool(r['isResolved'])
     } for r in rows])
 
 #===========
