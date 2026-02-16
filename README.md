@@ -269,7 +269,18 @@ Charts was designed with an interactive dashboard that generates personalized su
         * Utilizes custom priority scoring formula
 
 #### Analysis & Visualization
-* None yet
+| Chart | Chart Type | Category | Calculation |
+|---|---|---|---|
+| Asset comparison | grouped bar chart | Requires Calculation | Aggregation Method |
+| Priority score breakdown | stacked bar | Requires Calculation | Risk Formula |
+| Privilege/complexity heatmap | 2D grid | Requires Calculation | Aggregation Method |
+| KEV overlay | n/a | Static | None |
+| CWE frequency | bar chart | Static | None |
+| Attack vector breakdown | pie/bar | Static | None |
+| CVSS base score distribution | histogram | Static | None |
+| EPSS vs CVSS scatter | scatterplot | Static | None |
+| Severity over time | stacked area | Static | None |
+
 
 ### Known Issues
 
