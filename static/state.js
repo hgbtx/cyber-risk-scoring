@@ -73,6 +73,7 @@ function saveAssets() {
         body: JSON.stringify({ assets })
     });
 }
+
 // LOAD PERSISTED DATA ON STARTUP
 async function loadPersistedData() {
     // Load tickets
@@ -93,8 +94,15 @@ async function loadPersistedData() {
         for (const a of data) {
             cpeDataStore[a.cpeName] = a.cpeData;
             cveDataStore[a.cpeName] = a.cveData;
-            // Rebuild the left-panel item
         }
+    
+        // Load archived assets BEFORE rendering
+        try {
+            const archRes = await fetch('/db/load-archived-assets');
+            const archData = await archRes.json();
+            archivedAssets = new Set(archData);
+        } catch (e) { console.error('Failed to load archived assets:', e); }
+    
         if (data.length) {
             updateCveCounter();
             renderCveList();

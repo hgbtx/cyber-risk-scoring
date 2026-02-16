@@ -474,6 +474,21 @@ def load_assets():
         'cveData': json.loads(r['cveData'])
     } for r in rows])
 
+#---LOAD ARCHIVED ASSETS---
+@app.route('/db/load-archived-assets', methods=['GET'])
+@login_required
+def load_archived_assets():
+    uid = get_current_user_id()
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT assets.cpeName
+        FROM archivedAssets
+        JOIN assets ON archivedAssets.asset_id = assets.id
+        WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
+    ''', (uid,)).fetchall()
+    conn.close()
+    return jsonify([r['cpeName'] for r in rows])
+
 #---SAVE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
 @login_required

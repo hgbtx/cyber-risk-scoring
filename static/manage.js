@@ -69,6 +69,12 @@ function renderManageAssetsList(showArchived) {
     container.querySelectorAll('.ma-archive-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             archivedAssets.add(btn.dataset.cpe);
+            archivedAssets.add(btn.dataset.cpe);
+            fetch('/db/archived-assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpeName: btn.dataset.cpe, isArchived: 1 })
+            });
             refreshAfterManage();
             renderManageAssetsList(showArchived);
         });
@@ -76,6 +82,11 @@ function renderManageAssetsList(showArchived) {
     container.querySelectorAll('.ma-restore-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             archivedAssets.delete(btn.dataset.cpe);
+            fetch('/db/archived-assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpeName: btn.dataset.cpe, isArchived: 0 })
+            });
             refreshAfterManage();
             renderManageAssetsList(showArchived);
         });

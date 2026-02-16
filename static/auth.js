@@ -85,6 +85,7 @@ async function handleLogout() {
     document.getElementById('ticketsList').innerHTML = '';
     if (epssChartInstance) { epssChartInstance.destroy(); epssChartInstance = null; }
     if (ciaRadarChartInstance) { ciaRadarChartInstance.destroy(); ciaRadarChartInstance = null; }
+    archivedAssets = new Set();
     showAuthOverlay();
 }
 
