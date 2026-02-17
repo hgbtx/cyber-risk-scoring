@@ -55,18 +55,21 @@ function renderTickets() {
         div.innerHTML = `
         <!-- Header row -->
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>Ticket #${t.id}</strong>
-            <span style="display: inline-block; padding: 2px 8px; background: ${
-                t.status === 'Resolved' ? '#e8f5e9' :
-                t.status === 'In Progress' ? '#e3f2fd' :
-                t.status === 'Open' ? '#fff3e0' : '#f5f5f5'
-            }; color: ${
-                t.status === 'Resolved' ? '#2e7d32' :
-                t.status === 'In Progress' ? '#1565c0' :
-                t.status === 'Open' ? '#e67e22' : '#888'
-            }; border-radius: 3px; font-size: 0.75em; font-weight: 600;">${escapeHtml(t.status || 'Open')}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <strong>Ticket #${t.id}</strong>
             </div>
-            <span style="font-size: 0.8em; color: #888;">${escapeHtml(t.created)}</span>
+            <div style="display: flex; gap: 6px; align-items: flex-end;">
+                <span style="font-size: 0.8em; color: #888;">${escapeHtml(t.created)}</span>
+                <span style="padding: 2px 8px; background: ${
+                    t.status === 'Resolved' ? '#e8f5e9' :
+                    t.status === 'In Progress' ? '#e3f2fd' :
+                    t.status === 'Open' ? '#e67e22' : '#888'
+                }; color: ${
+                    t.status === 'Resolved' ? '#2e7d32' :
+                    t.status === 'In Progress' ? '#1565c0' :
+                    t.status === 'Open' ? '#fff3e0' : '#f5f5f5'
+                }; border-radius: 3px; font-size: 0.9em; font-weight: 600;">${escapeHtml(t.status || 'Open')}</span>
+            </div>
         </div>
     
         <!-- Feature tag + creator -->

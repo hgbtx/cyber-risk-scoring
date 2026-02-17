@@ -919,7 +919,8 @@ def load_tickets():
             acceptedTickets.isAccepted AS at_isAccepted,
             acceptors.email AS accepted_by_email,
             archivedTickets.archived AS at_archived,
-            archivedTickets.isArchived AS at_isArchived
+            archivedTickets.isArchived AS at_isArchived,
+            statusTickets.status AS st_status
         FROM tickets
         JOIN users ON tickets.user_id = users.id
         LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
@@ -987,7 +988,7 @@ def load_tickets():
         'archived': r['at_archived'] if r['at_isArchived'] else None,
         'comments': comments_map.get(r['id'], []),
         'activity': activity_map.get(r['id'], []),
-        'status': rows['st_status'] or 'Open'
+        'status': r['st_status'] or 'Open'
     } for r in rows])
 
 #===========
