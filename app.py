@@ -605,6 +605,47 @@ def save_tickets():
     conn.close()
     return jsonify({'success': True})
 
+#---TICKET STATUS---
+@app.route('/db/ticket-status', methods=['POST'])
+@login_required
+def ticket_status():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    status = data.get('status')
+
+    if not ticket_id or not status:
+        return jsonify({'error': 'ticket_id and status are required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    updated_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+    existing = conn.execute('SELECT id FROM statusTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
+    if existing:
+        conn.execute(
+            'UPDATE statusTickets SET status = ?, user_id = ?, updated = ? WHERE ticket_id = ?',
+            (status, uid, updated_ts, ticket_id)
+        )
+    else:
+        conn.execute(
+            'INSERT INTO statusTickets (ticket_id, user_id, status, updated) VALUES (?, ?, ?, ?)',
+            (ticket_id, uid, status, updated_ts)
+        )
+
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, f'Status changed to {status}', updated_ts)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'status': status, 'updated': updated_ts})
+
 #---DELETE TICKET---
 # @app.route('/db/ticket-delete', methods=['POST'])
 # @login_required
@@ -885,6 +926,7 @@ def load_tickets():
         LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
         LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
         LEFT JOIN archivedTickets ON archivedTickets.ticket_id = tickets.id
+        LEFT JOIN statusTickets ON statusTickets.ticket_id = tickets.id
     ''').fetchall()
 
     # Fetch all comments with commenter email
@@ -945,6 +987,7 @@ def load_tickets():
         'archived': r['at_archived'] if r['at_isArchived'] else None,
         'comments': comments_map.get(r['id'], []),
         'activity': activity_map.get(r['id'], []),
+        'status': rows['st_status'] or 'Open'
     } for r in rows])
 
 #===========

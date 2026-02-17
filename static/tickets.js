@@ -52,10 +52,20 @@ function renderTickets() {
         const isOwner = (t.user_id === uid || !t.user_id);
         const div = document.createElement('div');
         div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
-        div.innerHTML = div.innerHTML = `
+        div.innerHTML = `
         <!-- Header row -->
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong>Ticket #${t.id}</strong>
+            <span style="display: inline-block; padding: 2px 8px; background: ${
+                t.status === 'Resolved' ? '#e8f5e9' :
+                t.status === 'In Progress' ? '#e3f2fd' :
+                t.status === 'Open' ? '#fff3e0' : '#f5f5f5'
+            }; color: ${
+                t.status === 'Resolved' ? '#2e7d32' :
+                t.status === 'In Progress' ? '#1565c0' :
+                t.status === 'Open' ? '#e67e22' : '#888'
+            }; border-radius: 3px; font-size: 0.75em; font-weight: 600;">${escapeHtml(t.status || 'Open')}</span>
+            </div>
             <span style="font-size: 0.8em; color: #888;">${escapeHtml(t.created)}</span>
         </div>
     
@@ -130,6 +140,34 @@ function renderTickets() {
     }
 }
 
+// UPDATE TICKET STATUS
+function statusTicket(id, status) {
+    fetch('/db/ticket-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id, status: status })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.status = data.status;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: `Status changed to ${data.status}`,
+                    action_by: currentUser?.email,
+                    timestamp: data.updated
+                });
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to update ticket status');
+        }
+    })
+    .catch(e => console.error('Status ticket error:', e));
+}
+
 // ACCEPT TICKETS
 function acceptTicket(id) {
     fetch('/db/ticket-acceptance', {
@@ -152,6 +190,7 @@ function acceptTicket(id) {
                     timestamp: data.accepted
                 });
             }
+            statusTicket(id, 'In Progress');
             renderTickets();
         } else {
             alert(data.error || 'Failed to accept ticket');
@@ -229,6 +268,7 @@ function reassignTicket(id) {
                     timestamp: data.reassigned
                 });
             }
+            statusTicket(id, 'Open');
             renderTickets();
         } else {
             alert(data.error || 'Failed to reassign ticket');
@@ -259,6 +299,7 @@ function resolveTicket(id) {
                     timestamp: data.resolved
                 });
             }
+            statusTicket(id, 'Resolved');
             renderTickets();
         } else {
             alert(data.error || 'Failed to resolve ticket');
@@ -289,6 +330,7 @@ function reopenTicket(id) {
                     timestamp: new Date().toLocaleString()
                 });
             }
+            statusTicket(id, 'In Progress');
             renderTickets();
         } else {
             alert(data.error || 'Failed to reopen ticket');
@@ -318,6 +360,7 @@ function archiveTicket(id) {
                     timestamp: data.archived
                 });
             }
+            statusTicket(id, 'Resolved');
             renderTickets();
         } else {
             alert(data.error || 'Failed to archive ticket');
