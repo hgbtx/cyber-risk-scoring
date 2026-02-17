@@ -69,11 +69,6 @@ function addSelectedItem(data) {
     
     selectedItems.appendChild(itemDiv);
 
-    // Store CPE metadata if available from search cache
-    if (cpeSearchCache[itemCpeName]) {
-        cpeDataStore[itemCpeName] = cpeSearchCache[itemCpeName];
-    }
-
     // Fetch CVEs for this CPE in the background
     fetch('/api/fetch-cves', {
         method: 'POST',

@@ -5,7 +5,6 @@ let allResults = [];
 let currentPage = 1; // Pagination starts at page 1
 let cveDataStore = {}; // Stores CVE data by CPE name
 let cpeDataStore = {}; // Stores CPE metadata by CPE name
-let cpeSearchCache = {}; // Temp cache of CPE data from search results
 let totalCveCount = 0
 let expandedCveData = null; // Stores currently expanded CVE
 let epssChartInstance = null;
@@ -90,7 +89,6 @@ async function loadPersistedData() {
             renderTickets();
         }
     } catch (e) { console.error('Failed to load tickets:', e); }
-
     // Load assets
     try {
         const res = await fetch('/db/load-assets');
@@ -99,14 +97,30 @@ async function loadPersistedData() {
             cpeDataStore[a.cpeName] = a.cpeData;
             cveDataStore[a.cpeName] = a.cveData;
         }
-    
+
+        // Hydrate cpeDataStore from cpe_cache
+        const cpeNames = Object.keys(cveDataStore);
+        if (cpeNames.length) {
+            try {
+                const cpeRes = await fetch('/db/load-cpe-cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpeNames })
+                });
+                const cpeCache = await cpeRes.json();
+                for (const [cpeName, cpeData] of Object.entries(cpeCache)) {
+                    cpeDataStore[cpeName] = cpeData;
+                }
+            } catch (e) { console.error('Failed to load CPE cache:', e); }
+        }
+
         // Load archived assets BEFORE rendering
         try {
             const archRes = await fetch('/db/load-archived-assets');
             const archData = await archRes.json();
             archivedAssets = new Set(archData);
         } catch (e) { console.error('Failed to load archived assets:', e); }
-    
+
         if (data.length) {
             updateCveCounter();
             renderCveList();

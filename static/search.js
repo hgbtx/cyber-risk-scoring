@@ -134,12 +134,11 @@ function displayResults(results) {
     allResults = results;
     currentPage = 1;
     document.getElementById('clearFilters').click();
-    cpeSearchCache = {}; // Clear previous cache before repopulating
-
-    // Cache CPE metadata from search results
+    
+    // Populate cpeDataStore from search results (backed by cpe_cache in DB)
     for (const r of results) {
         if (r.cpeName && r.cpeData) {
-            cpeSearchCache[r.cpeName] = r.cpeData;
+            cpeDataStore[r.cpeName] = r.cpeData;
         }
     }
 
@@ -306,6 +305,5 @@ document.getElementById('clearResults').addEventListener('click', (e) => {
     resultsContainer.style.display = 'none';
     document.getElementById('searchFilterPanel').style.display = 'none';
     searchInput.value = '';
-    cpeSearchCache = {}; // Clear search cache
     document.getElementById('searchFilterPanel').style.display = 'none';
 });

@@ -78,7 +78,7 @@ async function handleLogout() {
     await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
     currentUser = null;
     allResults = []; cveDataStore = {}; cpeDataStore = {};
-    cpeSearchCache = {}; totalCveCount = 0; tickets = []; ticketIdCounter = 1;
+    totalCveCount = 0; tickets = []; ticketIdCounter = 1;
     selectedItems.innerHTML = '<p id="placeholder" style="color:#999;font-style:italic;">Drag and drop your assets here...</p>';
     document.getElementById('cveCounts').textContent = '0 CVEs found';
     resultsList.innerHTML = ''; resultsContainer.style.display = 'none';

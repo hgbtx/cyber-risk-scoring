@@ -42,7 +42,7 @@ function getActiveFilters() {
 function applyResultFilters() {
     const filters = getActiveFilters();
     const filtered = allResults.filter(r => {
-        const cpeData = r.cpeData || cpeSearchCache[r.cpeName] || {};
+        const cpeData = r.cpeData || cpeDataStore[r.cpeName] || {};
         const parts = parseCpeParts(r.cpeName || '');
 
         // Deprecated filter

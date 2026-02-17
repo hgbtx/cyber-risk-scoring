@@ -180,7 +180,19 @@ def search_cpe_names():
         if start_index >= total_results:
             break
         time.sleep(rate_secs)
-    return jsonify(all_results)
+        # Cache CPE data from search results
+        if all_results:
+            conn = get_db()
+            for r in all_results:
+                conn.execute('''
+                    INSERT INTO cpe_cache (cpeName, cpeData, fetched_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(cpeName)
+                    DO UPDATE SET cpeData=excluded.cpeData, fetched_at=CURRENT_TIMESTAMP
+                ''', (r['cpeName'], json.dumps(r.get('cpeData', {}))))
+            conn.commit()
+            conn.close()
+        return jsonify(all_results)
 
 #---CPE QUERY: NVD CVE FETCH---
 def fetch_cves_for_cpe(cpe_uri: str) -> list[dict]:
@@ -426,6 +438,30 @@ def count_high_risk(series, threshold=7.0):
 #====================
 # DATABASE ENDPOINTS
 #====================
+
+#---LOAD CPE CACHE---
+@app.route('/db/load-cpe-cache', methods=['POST'])
+@login_required
+def load_cpe_cache():
+    cpe_names = request.json.get('cpeNames', [])
+    if not cpe_names:
+        return jsonify({})
+
+    conn = get_db()
+    placeholders = ','.join('?' * len(cpe_names))
+    rows = conn.execute(
+        f'SELECT cpeName, cpeData FROM cpe_cache WHERE cpeName IN ({placeholders})',
+        cpe_names
+    ).fetchall()
+    conn.close()
+
+    result = {}
+    for r in rows:
+        try:
+            result[r['cpeName']] = json.loads(r['cpeData'])
+        except (json.JSONDecodeError, TypeError):
+            result[r['cpeName']] = {}
+    return jsonify(result)
 
 #---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
