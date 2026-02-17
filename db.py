@@ -59,6 +59,13 @@ def init_db():
             FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+        
+        CREATE TABLE IF NOT EXISTS cpe_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cpeName TEXT UNIQUE NOT NULL,
+            cpeData TEXT,
+            fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
     conn.commit()
     conn.close()
