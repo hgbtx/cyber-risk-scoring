@@ -65,13 +65,11 @@ function renderTickets() {
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         ${t.isAccepted
             ? `<div style="display: flex; flex-direction: column; gap: 2px;">
-                <span style="font-size: 0.82em; color: #888;">Accepted by ${escapeHtml(t.accepted_by)} — ${escapeHtml(t.accepted)}</span>`
+                <span style="font-size: 0.82em; color: #888;"></span></div>`
             : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
         }
         ${t.isResolved
-            ? `<span style="font-size: 0.82em; color: #888;">Resolved by ${escapeHtml(t.resolved_by || t.accepted_by)} — ${escapeHtml(t.resolved)}</span>
-               </div>
-               <div style="display: flex; gap: 8px; margin-top: 6px;">
+            ? `<div style="display: flex; gap: 8px; margin-top: 6px;">
                ${t.accepted_by === currentUser?.email
                    ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
                       <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
@@ -90,6 +88,7 @@ function renderTickets() {
                    </div>`
                 : '')
         }
+        ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
         ${(t.comments && t.comments.length) ? `
             <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
                 ${t.comments.map(c => `
@@ -109,8 +108,6 @@ function renderTickets() {
                         </div>
                     `).join('')}
                 </div>` : ''}
-        ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
-        ${t.reassigned && !t.isAccepted ? `<span style="font-size: 0.82em; color: #888;">Reassigned by ${escapeHtml(t.reassigned_by)} — ${escapeHtml(t.reassigned)}</span>` : ''}
         </div>
     `;
         container.appendChild(div);

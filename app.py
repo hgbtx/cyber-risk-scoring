@@ -642,7 +642,7 @@ def ticket_acceptance():
 
     conn.execute(
         'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-        (ticket_id, uid, 'accepted', accepted_ts)
+        (ticket_id, uid, 'Accepted', accepted_ts)
     )
 
     conn.commit()
@@ -695,7 +695,7 @@ def ticket_resolution():
             (ticket_id, resolved_ts, int(is_resolved))
         )
 
-    action = 'resolved' if is_resolved else 'reopened'
+    action = 'Resolved' if is_resolved else 'Reopened'
     conn.execute(
         'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
         (ticket_id, get_current_user_id(), action, resolved_ts or datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p'))
@@ -753,7 +753,7 @@ def ticket_reassign():
 
     conn.execute(
         'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-        (ticket_id, uid, 'reassigned', reassigned_ts)
+        (ticket_id, uid, 'Reassigned', reassigned_ts)
     )
 
     conn.commit()
@@ -855,7 +855,7 @@ def ticket_archive():
             (ticket_id, accepted['id'], uid, archived_ts, int(is_archived))
         )
 
-    action = 'archived' if is_archived else 'unarchived'
+    action = 'Archived' if is_archived else 'Unarchived'
     conn.execute(
         'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
         (ticket_id, uid, action, archived_ts or datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p'))
@@ -895,7 +895,6 @@ def load_tickets():
         JOIN users ON commentTickets.user_id = users.id
         ORDER BY commentTickets.id ASC
     ''').fetchall()
-    conn.close()
 
     # Group comments by ticket_id
     comments_map = {}
@@ -928,6 +927,7 @@ def load_tickets():
             'timestamp': a['timestamp']
         })
 
+    conn.close()
     return jsonify([{
         'id': r['id'],
         'user_id': r['user_id'],
