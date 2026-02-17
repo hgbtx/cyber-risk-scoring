@@ -724,6 +724,59 @@ def ticket_acceptance():
     conn.close()
     return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
 
+#---REASSIGN TICKET---
+@app.route('/db/ticket-reassign', methods=['POST'])
+@login_required
+def ticket_reassign():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Only the current acceptor can reassign
+    accepted = conn.execute(
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if not accepted or accepted['user_id'] != uid:
+        conn.close()
+        return jsonify({'error': 'Only the accepting user can reassign this ticket'}), 403
+
+    reassigned_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+
+    # Clear the acceptance
+    conn.execute(
+        'UPDATE acceptedTickets SET isAccepted = 0 WHERE ticket_id = ? AND user_id = ?',
+        (ticket_id, uid)
+    )
+
+    # Clear any resolution tied to this ticket
+    conn.execute(
+        'UPDATE resolvedTickets SET isResolved = 0, resolved = NULL WHERE ticket_id = ?',
+        (ticket_id,)
+    )
+
+    # Log the reassignment
+    conn.execute(
+        'INSERT INTO reassignedTickets (ticket_id, user_id, reassigned) VALUES (?, ?, ?)',
+        (ticket_id, uid, reassigned_ts)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'success': True, 'ticket_id': ticket_id,
+        'reassigned': reassigned_ts, 'reassigned_by': email
+    })
+
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
@@ -737,13 +790,21 @@ def load_tickets():
             acceptedTickets.isAccepted AS at_isAccepted,
             acceptors.email AS accepted_by_email,
             archivedTickets.archived AS at_archived,
-            archivedTickets.isArchived AS at_isArchived
+            archivedTickets.isArchived AS at_isArchived,
+            latest_reassign.reassigned AS ra_reassigned,
+            reassigners.email AS reassigned_by_email
         FROM tickets
         JOIN users ON tickets.user_id = users.id
         LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
         LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
         LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
         LEFT JOIN archivedTickets ON archivedTickets.ticket_id = tickets.id
+        LEFT JOIN (
+            SELECT ticket_id, user_id, reassigned,
+                   ROW_NUMBER() OVER (PARTITION BY ticket_id ORDER BY id DESC) AS rn
+            FROM reassignedTickets
+        ) AS latest_reassign ON latest_reassign.ticket_id = tickets.id AND latest_reassign.rn = 1
+        LEFT JOIN users AS reassigners ON latest_reassign.user_id = reassigners.id
     ''').fetchall()
     conn.close()
     return jsonify([{
@@ -761,6 +822,8 @@ def load_tickets():
         'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None,
         'isArchived': bool(r['at_isArchived']) if r['at_isArchived'] is not None else False,
         'archived': r['at_archived'] if r['at_isArchived'] else None,
+        'reassigned': r['ra_reassigned'],
+        'reassigned_by': r['reassigned_by_email']
     } for r in rows])
 
 #===========

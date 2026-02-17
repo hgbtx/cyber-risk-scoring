@@ -78,12 +78,16 @@ function renderTickets() {
                    : ''
                }
                </div>`
-            : (t.isAccepted && t.accepted_by === currentUser?.email
-                ? `<button onclick="resolveTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
+               : (t.isAccepted && t.accepted_by === currentUser?.email
+                ? `<div style="display: flex; gap: 8px;">
+                     <button onclick="resolveTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
+                     <button onclick="reassignTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>
+                   </div>`
                 : '')
         }
         ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
-    </div>
+        ${t.reassigned && !t.isAccepted ? `<span style="font-size: 0.82em; color: #888;">Reassigned by ${escapeHtml(t.reassigned_by)} — ${escapeHtml(t.reassigned)}</span>` : ''}
+        </div>
     `;
         container.appendChild(div);
     }
@@ -111,6 +115,35 @@ function acceptTicket(id) {
         }
     })
     .catch(e => console.error('Accept ticket error:', e));
+}
+
+// REASSIGN TICKET
+function reassignTicket(id) {
+    fetch('/db/ticket-reassign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.isAccepted = false;
+                t.accepted = null;
+                t.accepted_by = null;
+                t.isResolved = false;
+                t.resolved = null;
+                t.resolved_by = null;
+                t.reassigned = data.reassigned;
+                t.reassigned_by = data.reassigned_by;
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to reassign ticket');
+        }
+    })
+    .catch(e => console.error('Reassign ticket error:', e));
 }
 
 // RESOLVE TICKETS
