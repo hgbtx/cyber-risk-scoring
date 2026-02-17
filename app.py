@@ -462,6 +462,10 @@ def load_cpe_cache():
             result[r['cpeName']] = {}
     return jsonify(result)
 
+#=====================
+# ASSET DB ENDPOINTS
+#=====================
+
 #---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
 @login_required
@@ -561,6 +565,10 @@ def load_archived_assets():
     conn.close()
     return jsonify([r['cpeName'] for r in rows])
 
+#=====================
+# TICKET DB ENDPOINTS
+#=====================
+
 #---SAVE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
 @login_required
@@ -597,10 +605,57 @@ def save_tickets():
     conn.close()
     return jsonify({'success': True})
 
-#---SAVE RESOLVED TICKETS---
+#---DELETE TICKET---
+# @app.route('/db/ticket-delete', methods=['POST'])
+# @login_required
+def ticket_delete():
+    pass
+
+#---ACCEPT TICKET---
+@app.route('/db/ticket-acceptance', methods=['POST'])
+@login_required
+def ticket_acceptance():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Check if already accepted
+    existing = conn.execute('SELECT id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Ticket already accepted'}), 409
+
+    accepted_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    conn.execute(
+        'INSERT INTO acceptedTickets (ticket_id, user_id, accepted, isAccepted) VALUES (?, ?, ?, 1)',
+        (ticket_id, uid, accepted_ts)
+    )
+
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'accepted', accepted_ts)
+    )
+
+    conn.commit()
+
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
+
+#---RESOLVE TICKET---
 @app.route('/db/ticket-resolution', methods=['POST'])
 @login_required
 def ticket_resolution():
+    uid = get_current_user_id()
     data = request.json or {}
     ticket_id = data.get('ticket_id')
     is_resolved = data.get('isResolved', 0)
@@ -640,89 +695,15 @@ def ticket_resolution():
             (ticket_id, resolved_ts, int(is_resolved))
         )
 
+    action = 'resolved' if is_resolved else 'reopened'
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, get_current_user_id(), action, resolved_ts or datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p'))
+    )
+
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'ticket_id': ticket_id, 'isResolved': is_resolved, 'resolved': resolved_ts})
-
-#---ARCHIVE TICKET---
-@app.route('/db/ticket-archive', methods=['POST'])
-@login_required
-def ticket_archive():
-    uid = get_current_user_id()
-    data = request.json or {}
-    ticket_id = data.get('ticket_id')
-    is_archived = data.get('isArchived', 0)
-
-    if not ticket_id:
-        return jsonify({'error': 'ticket_id is required'}), 400
-
-    conn = get_db()
-    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
-    if not ticket:
-        conn.close()
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    # Only the acceptor can archive
-    accepted = conn.execute(
-        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
-    ).fetchone()
-    if not accepted or accepted['user_id'] != uid:
-        conn.close()
-        return jsonify({'error': 'Only the accepting user can archive this ticket'}), 403
-
-    archived_ts = None
-    if is_archived:
-        archived_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-
-    existing = conn.execute('SELECT id FROM archivedTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
-    if existing:
-        conn.execute(
-            'UPDATE archivedTickets SET archived = ?, isArchived = ? WHERE ticket_id = ?',
-            (archived_ts, int(is_archived), ticket_id)
-        )
-    else:
-        conn.execute(
-            'INSERT INTO archivedTickets (ticket_id, accepted_id, user_id, archived, isArchived) VALUES (?, ?, ?, ?, ?)',
-            (ticket_id, accepted['id'], uid, archived_ts, int(is_archived))
-        )
-
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'ticket_id': ticket_id, 'isArchived': is_archived, 'archived': archived_ts})
-
-#---ACCEPT TICKET---
-@app.route('/db/ticket-acceptance', methods=['POST'])
-@login_required
-def ticket_acceptance():
-    uid = get_current_user_id()
-    data = request.json or {}
-    ticket_id = data.get('ticket_id')
-
-    if not ticket_id:
-        return jsonify({'error': 'ticket_id is required'}), 400
-
-    conn = get_db()
-    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
-    if not ticket:
-        conn.close()
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    # Check if already accepted
-    existing = conn.execute('SELECT id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)).fetchone()
-    if existing:
-        conn.close()
-        return jsonify({'error': 'Ticket already accepted'}), 409
-
-    accepted_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    conn.execute(
-        'INSERT INTO acceptedTickets (ticket_id, user_id, accepted, isAccepted) VALUES (?, ?, ?, 1)',
-        (ticket_id, uid, accepted_ts)
-    )
-    conn.commit()
-
-    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
-    conn.close()
-    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
@@ -768,6 +749,11 @@ def ticket_reassign():
     conn.execute(
         'INSERT INTO reassignedTickets (ticket_id, user_id, reassigned) VALUES (?, ?, ?)',
         (ticket_id, uid, reassigned_ts)
+    )
+
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'reassigned', reassigned_ts)
     )
 
     conn.commit()
@@ -821,6 +807,64 @@ def ticket_comment():
         'comment_description': comment_desc
     })
 
+#---REOPEN TICKET---
+# @app.route('/db/ticket-reopen', methods=['POST'])
+# @login_required
+def ticket_reopen():
+    pass
+
+#---ARCHIVE TICKET---
+@app.route('/db/ticket-archive', methods=['POST'])
+@login_required
+def ticket_archive():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    is_archived = data.get('isArchived', 0)
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Only the acceptor can archive
+    accepted = conn.execute(
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if not accepted or accepted['user_id'] != uid:
+        conn.close()
+        return jsonify({'error': 'Only the accepting user can archive this ticket'}), 403
+
+    archived_ts = None
+    if is_archived:
+        archived_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+    existing = conn.execute('SELECT id FROM archivedTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
+    if existing:
+        conn.execute(
+            'UPDATE archivedTickets SET archived = ?, isArchived = ? WHERE ticket_id = ?',
+            (archived_ts, int(is_archived), ticket_id)
+        )
+    else:
+        conn.execute(
+            'INSERT INTO archivedTickets (ticket_id, accepted_id, user_id, archived, isArchived) VALUES (?, ?, ?, ?, ?)',
+            (ticket_id, accepted['id'], uid, archived_ts, int(is_archived))
+        )
+
+    action = 'archived' if is_archived else 'unarchived'
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, action, archived_ts or datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p'))
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'isArchived': is_archived, 'archived': archived_ts})
+
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
@@ -846,7 +890,7 @@ def load_tickets():
     # Fetch all comments with commenter email
     comment_rows = conn.execute('''
         SELECT commentTickets.ticket_id, commentTickets.commented,
-               commentTickets.comment_description, users.email AS comment_by
+            commentTickets.comment_description, users.email AS comment_by
         FROM commentTickets
         JOIN users ON commentTickets.user_id = users.id
         ORDER BY commentTickets.id ASC
@@ -865,6 +909,25 @@ def load_tickets():
             'comment_description': c['comment_description']
         })
 
+    activity_rows = conn.execute('''
+        SELECT ticketActivity.ticket_id, ticketActivity.action,
+            ticketActivity.timestamp, users.email AS action_by
+        FROM ticketActivity
+        JOIN users ON ticketActivity.user_id = users.id
+        ORDER BY ticketActivity.id ASC
+    ''').fetchall()
+
+    activity_map = {}
+    for a in activity_rows:
+        tid = a['ticket_id']
+        if tid not in activity_map:
+            activity_map[tid] = []
+        activity_map[tid].append({
+            'action': a['action'],
+            'action_by': a['action_by'],
+            'timestamp': a['timestamp']
+        })
+
     return jsonify([{
         'id': r['id'],
         'user_id': r['user_id'],
@@ -881,6 +944,7 @@ def load_tickets():
         'isArchived': bool(r['at_isArchived']) if r['at_isArchived'] is not None else False,
         'archived': r['at_archived'] if r['at_isArchived'] else None,
         'comments': comments_map.get(r['id'], []),
+        'activity': activity_map.get(r['id'], []),
     } for r in rows])
 
 #===========

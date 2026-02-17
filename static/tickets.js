@@ -99,6 +99,16 @@ function renderTickets() {
                     </div>
                 `).join('')}
             </div>` : ''}
+            ${t.activity && t.activity.length ? `
+                <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+                    ${t.activity.map(a => `
+                        <div style="margin-bottom: 4px;">
+                            <span style="font-size: 0.82em; color: #888;">
+                                ${escapeHtml(a.action)} by ${escapeHtml(a.action_by)} — ${escapeHtml(a.timestamp)}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>` : ''}
         ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
         ${t.reassigned && !t.isAccepted ? `<span style="font-size: 0.82em; color: #888;">Reassigned by ${escapeHtml(t.reassigned_by)} — ${escapeHtml(t.reassigned)}</span>` : ''}
         </div>
@@ -122,6 +132,12 @@ function acceptTicket(id) {
                 t.isAccepted = true;
                 t.accepted = data.accepted;
                 t.accepted_by = data.accepted_by;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'accepted',
+                    action_by: currentUser?.email,
+                    timestamp: data.accepted
+                });
             }
             renderTickets();
         } else {
@@ -193,6 +209,12 @@ function reassignTicket(id) {
                 t.resolved_by = null;
                 t.reassigned = data.reassigned;
                 t.reassigned_by = data.reassigned_by;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'reassigned',
+                    action_by: currentUser?.email,
+                    timestamp: data.reassigned
+                });
             }
             renderTickets();
         } else {
@@ -217,6 +239,12 @@ function resolveTicket(id) {
                 t.isResolved = true;
                 t.resolved = data.resolved;
                 t.resolved_by = currentUser?.email;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'resolved',
+                    action_by: currentUser?.email,
+                    timestamp: data.resolved
+                });
             }
             renderTickets();
         } else {
@@ -241,6 +269,12 @@ function reopenTicket(id) {
                 t.isResolved = false;
                 t.resolved = null;
                 t.resolved_by = null;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'reopened',
+                    action_by: currentUser?.email,
+                    timestamp: new Date().toLocaleString()
+                });
             }
             renderTickets();
         } else {
@@ -264,6 +298,12 @@ function archiveTicket(id) {
             if (t) {
                 t.isArchived = true;
                 t.archived = data.archived;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'archived',
+                    action_by: currentUser?.email,
+                    timestamp: data.archived
+                });
             }
             renderTickets();
         } else {
