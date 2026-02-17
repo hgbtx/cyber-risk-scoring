@@ -75,7 +75,31 @@ def init_db():
             isAccepted INTEGER DEFAULT 0,
             FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );            
+        );
+        
+        CREATE TABLE IF NOT EXISTS archivedTickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            accepted_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            archived TEXT,
+            isArchived INTEGER DEFAULT 0,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (accepted_id) REFERENCES acceptedTickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        
+        CREATE TABLE IF NOT EXISTS commentTickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            accepted_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            commented TEXT,
+            comment_description TEXT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (accepted_id) REFERENCES acceptedTickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     ''')
     conn.commit()
     conn.close()

@@ -245,7 +245,6 @@ def api_fetch_cves():
     
     return jsonify({'error': 'No CPE URI provided'}), 400
 
-
 #---FETCH KEV ID VIA NVD API---
 def fetch_kev_ids() -> set:
     """Fetch all CVE IDs in CISA's KEV catalog via NVD API."""
@@ -614,6 +613,16 @@ def ticket_resolution():
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
+    
+    accepted = conn.execute(
+        'SELECT user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if not accepted:
+        conn.close()
+        return jsonify({'error': 'Ticket must be accepted before resolving'}), 400
+    if accepted['user_id'] != get_current_user_id():
+        conn.close()
+        return jsonify({'error': 'Only the accepting user can resolve this ticket'}), 403
 
     resolved_ts = None
     if is_resolved:
@@ -635,6 +644,40 @@ def ticket_resolution():
     conn.close()
     return jsonify({'success': True, 'ticket_id': ticket_id, 'isResolved': is_resolved, 'resolved': resolved_ts})
 
+#---ACCEPT TICKET---
+@app.route('/db/ticket-acceptance', methods=['POST'])
+@login_required
+def ticket_acceptance():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Check if already accepted
+    existing = conn.execute('SELECT id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Ticket already accepted'}), 409
+
+    accepted_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    conn.execute(
+        'INSERT INTO acceptedTickets (ticket_id, user_id, accepted, isAccepted) VALUES (?, ?, ?, 1)',
+        (ticket_id, uid, accepted_ts)
+    )
+    conn.commit()
+
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
+
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
@@ -643,10 +686,15 @@ def load_tickets():
     rows = conn.execute('''
         SELECT tickets.*, users.email AS creator_email,
             resolvedTickets.resolved AS rt_resolved,
-            resolvedTickets.isResolved AS rt_isResolved
+            resolvedTickets.isResolved AS rt_isResolved,
+            acceptedTickets.accepted AS at_accepted,
+            acceptedTickets.isAccepted AS at_isAccepted,
+            acceptors.email AS accepted_by_email
         FROM tickets
         JOIN users ON tickets.user_id = users.id
         LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
+        LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
+        LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
     ''').fetchall()
     conn.close()
     return jsonify([{
@@ -657,7 +705,11 @@ def load_tickets():
         'feature': r['feature'],
         'created': r['created'],
         'resolved': r['rt_resolved'] if r['rt_isResolved'] else None,
-        'isResolved': bool(r['rt_isResolved']) if r['rt_isResolved'] is not None else bool(r['isResolved'])
+        'isResolved': bool(r['rt_isResolved']) if r['rt_isResolved'] is not None else bool(r['isResolved']),
+        'accepted': r['at_accepted'] if r['at_isAccepted'] else None,
+        'isAccepted': bool(r['at_isAccepted']) if r['at_isAccepted'] is not None else False,
+        'accepted_by': r['accepted_by_email'] if r['at_isAccepted'] else None,
+        'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None
     } for r in rows])
 
 #===========
