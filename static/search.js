@@ -193,14 +193,7 @@ function displayResults(results) {
     // Reduce opacity to 0.4 if disabled, otherwise 1.0 to visually indicate disabled state
     depEl.style.opacity = depUnique.size <= 1 ? '0.4' : '1';
     
-    // Date fields
-    const uniqueDates = new Set(allResults.map(r => r.cpeData?.created || ''));
-    const dateSingle = uniqueDates.size <= 1;
-    ['filterDateFrom', 'filterDateTo'].forEach(id => {
-        const el = document.getElementById(id);
-        el.disabled = dateSingle;
-        el.style.opacity = dateSingle ? '0.4' : '1';
-    });
+    initDateSlider(results);
     
     document.getElementById('searchFilterPanel').style.display = 'block';
     updateFilterFieldStates();

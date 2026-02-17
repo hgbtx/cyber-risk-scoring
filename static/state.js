@@ -20,6 +20,7 @@ let tickets = [];
 let ticketIdCounter = 1;
 let archivedAssets = new Set(); // CPE names hidden from grid/charts
 let cvssHistogramInstance = null;
+let _dateSliderDates = []; // sorted unique date strings
 
 // =====================
 // DOM REFERENCES

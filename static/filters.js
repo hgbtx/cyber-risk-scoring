@@ -20,12 +20,73 @@ function parseCpeParts(cpeName) {
     };
 }
 
+// =====================
+// DATE SLIDER STATE
+// =====================
+
+// INIT DATE SLIDER
+function initDateSlider(results) {
+    const dates = [...new Set(results.map(r => (r.cpeData?.created || '').slice(0, 10)).filter(Boolean))].sort();
+    _dateSliderDates = dates;
+    const fromEl = document.getElementById('filterDateFrom');
+    const toEl = document.getElementById('filterDateTo');
+    const minLabel = document.getElementById('dateSliderMinLabel');
+    const maxLabel = document.getElementById('dateSliderMaxLabel');
+
+    if (dates.length <= 1) {
+        fromEl.disabled = true; toEl.disabled = true;
+        fromEl.style.opacity = '0.4'; toEl.style.opacity = '0.4';
+        minLabel.textContent = dates[0] || '—';
+        maxLabel.textContent = dates[0] || '—';
+        fromEl.value = 0; toEl.value = 0; fromEl.max = 0; toEl.max = 0;
+        updateDateSliderTrack();
+        return;
+    }
+
+    fromEl.disabled = false; toEl.disabled = false;
+    fromEl.style.opacity = '1'; toEl.style.opacity = '1';
+    fromEl.min = 0; fromEl.max = dates.length - 1; fromEl.value = 0;
+    toEl.min = 0; toEl.max = dates.length - 1; toEl.value = dates.length - 1;
+    minLabel.textContent = dates[0];
+    maxLabel.textContent = dates[dates.length - 1];
+    updateDateSliderTrack();
+}
+
+// UPDATE SLIDER TRACK
+function updateDateSliderTrack() {
+    const fromEl = document.getElementById('filterDateFrom');
+    const toEl = document.getElementById('filterDateTo');
+    const range = document.getElementById('dateSliderRange');
+    const max = parseInt(fromEl.max) || 1;
+    const lo = parseInt(fromEl.value); const hi = parseInt(toEl.value);
+    range.style.left = (lo / max * 100) + '%';
+    range.style.width = ((hi - lo) / max * 100) + '%';
+    document.getElementById('dateSliderMinLabel').textContent = _dateSliderDates[lo] || '—';
+    document.getElementById('dateSliderMaxLabel').textContent = _dateSliderDates[hi] || '—';
+}
+
+// PREVENTS THUMBS FROM CROSSING ON SLIDER
+document.getElementById('filterDateFrom').addEventListener('input', function () {
+    const toVal = parseInt(document.getElementById('filterDateTo').value);
+    if (parseInt(this.value) > toVal) this.value = toVal;
+    updateDateSliderTrack();
+});
+document.getElementById('filterDateTo').addEventListener('input', function () {
+    const fromVal = parseInt(document.getElementById('filterDateFrom').value);
+    if (parseInt(this.value) < fromVal) this.value = fromVal;
+    updateDateSliderTrack();
+});
+
+// =====================
+// OTHER FILTERS
+// =====================
+
 // GET CURRENT FILTER VALUES
 function getActiveFilters() {
     return {
         deprecated: document.getElementById('filterDeprecated').value,
-        dateFrom: document.getElementById('filterDateFrom').value,
-        dateTo: document.getElementById('filterDateTo').value,
+        dateFrom: _dateSliderDates[parseInt(document.getElementById('filterDateFrom').value)] || '',
+        dateTo: _dateSliderDates[parseInt(document.getElementById('filterDateTo').value)] || '',
         vendor: document.getElementById('filterVendor').value.toLowerCase(),
         product: document.getElementById('filterProduct').value.toLowerCase(),
         version: document.getElementById('filterVersion').value.toLowerCase(),
@@ -116,8 +177,9 @@ document.getElementById('applyFilters').addEventListener('click', applyResultFil
 document.getElementById('clearFilters').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('filterDeprecated').value = '';
-    document.getElementById('filterDateFrom').value = '';
-    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterDateFrom').value = 0;
+    document.getElementById('filterDateTo').value = document.getElementById('filterDateTo').max || 0;
+    updateDateSliderTrack();
     document.getElementById('filterVendor').value = '';
     document.getElementById('filterProduct').value = '';
     document.getElementById('filterVersion').value = '';
