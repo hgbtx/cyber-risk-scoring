@@ -79,10 +79,10 @@ function renderTickets() {
                }
                </div>`
             : (t.isAccepted && t.accepted_by === currentUser?.email
-                ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
+                ? `<button onclick="resolveTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
                 : '')
         }
-        ${isOwner ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
+        ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
     </div>
     `;
         container.appendChild(div);
