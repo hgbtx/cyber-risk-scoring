@@ -180,19 +180,19 @@ def search_cpe_names():
         if start_index >= total_results:
             break
         time.sleep(rate_secs)
-        # Cache CPE data from search results
-        if all_results:
-            conn = get_db()
-            for r in all_results:
-                conn.execute('''
-                    INSERT INTO cpe_cache (cpeName, cpeData, fetched_at)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(cpeName)
-                    DO UPDATE SET cpeData=excluded.cpeData, fetched_at=CURRENT_TIMESTAMP
-                ''', (r['cpeName'], json.dumps(r.get('cpeData', {}))))
-            conn.commit()
-            conn.close()
-        return jsonify(all_results)
+    # Cache CPE data from search results
+    if all_results:
+        conn = get_db()
+        for r in all_results:
+            conn.execute('''
+                INSERT INTO cpe_cache (cpeName, cpeData, fetched_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(cpeName)
+                DO UPDATE SET cpeData=excluded.cpeData, fetched_at=CURRENT_TIMESTAMP
+            ''', (r['cpeName'], json.dumps(r.get('cpeData', {}))))
+        conn.commit()
+        conn.close()
+    return jsonify(all_results)
 
 #---CPE QUERY: NVD CVE FETCH---
 def fetch_cves_for_cpe(cpe_uri: str) -> list[dict]:
