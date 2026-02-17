@@ -84,7 +84,7 @@ async function handleLogout() {
     resultsList.innerHTML = ''; resultsContainer.style.display = 'none';
     document.getElementById('ticketsList').innerHTML = '';
     if (epssChartInstance) { epssChartInstance.destroy(); epssChartInstance = null; }
-    if (ciaRadarChartInstance) { ciaRadarChartInstance.destroy(); ciaRadarChartInstance = null; }
+    if (cvssHistogramInstance) { cvssHistogramInstance.destroy(); cvssHistogramInstance = null; }
     archivedAssets = new Set();
     showAuthOverlay();
 }

@@ -20,6 +20,7 @@ let chartRiskThreshold = 7.0;
 let tickets = [];
 let ticketIdCounter = 1;
 let archivedAssets = new Set(); // CPE names hidden from grid/charts
+let cvssHistogramInstance = null;
 
 // =====================
 // DOM REFERENCES
@@ -107,7 +108,7 @@ async function loadPersistedData() {
             updateCveCounter();
             renderCveList();
             renderEpssChart();
-            renderCiaRadarChart();
+            renderCvssHistogram();
         }
     } catch (e) { console.error('Failed to load assets:', e); }
 }

@@ -116,5 +116,5 @@ function refreshAfterManage() {
     updateCveCounter();
     renderCveGrid();
     renderEpssChart();
-    renderCiaRadarChart();
+    renderCvssHistogram();
 }

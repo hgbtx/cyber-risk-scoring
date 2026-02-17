@@ -222,6 +222,87 @@ function renderCiaRadarChart() {
     });
 }
 
+// RENDER CVSS HISTOGRAM
+function renderCvssHistogram() {
+    const canvas = document.getElementById('cvssHistogramChart');
+    const buckets = Array(10).fill(0); // 0-1, 1-2, ... 9-10
+
+    for (const cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;
+        const data = cveDataStore[cpe];
+        if (!data?.vulnerabilities) continue;
+        for (const vuln of data.vulnerabilities) {
+            const cvss31 = vuln.cve?.metrics?.cvssMetricV31?.[0]?.cvssData;
+            const cvss2 = vuln.cve?.metrics?.cvssMetricV2?.[0]?.cvssData;
+            const score = cvss31?.baseScore ?? cvss2?.baseScore ?? null;
+            if (score !== null) {
+                const idx = Math.min(Math.floor(score), 9);
+                buckets[idx]++;
+            }
+        }
+    }
+
+    if (buckets.every(b => b === 0)) {
+        canvas.style.display = 'none';
+        if (cvssHistogramInstance) { cvssHistogramInstance.destroy(); cvssHistogramInstance = null; }
+        return;
+    }
+
+    canvas.style.display = 'block';
+    if (cvssHistogramInstance) cvssHistogramInstance.destroy();
+
+    const labels = ['0–1', '1–2', '2–3', '3–4', '4–5', '5–6', '6–7', '7–8', '8–9', '9–10'];
+
+    cvssHistogramInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'CVE Count',
+                data: buckets,
+                backgroundColor: buckets.map((_, i) => {
+                    const mid = i + 0.5;
+                    if (mid >= 9) return '#7b1fa2';
+                    if (mid >= 7) return '#c01e19';
+                    if (mid >= 4) return '#e67e22';
+                    return '#50b88e';
+                }),
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: 'CVSS Base Score' } },
+                y: { beginAtZero: true, title: { display: true, text: 'Count' }, ticks: { stepSize: 1 } }
+            },
+            plugins: {
+                legend: { display: false },
+                annotation: {
+                    annotations: {
+                        thresholdLine: {
+                            type: 'line',
+                            xMin: chartRiskThreshold,
+                            xMax: chartRiskThreshold,
+                            borderColor: '#c01e19',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: `Threshold: ${chartRiskThreshold}`,
+                                position: 'start',
+                                backgroundColor: '#c01e19',
+                                color: 'white',
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+
 // CVE ID FINDER FOR CHART INTERACTIONS
 function findVulnByCveId(cveId) {
     for (const cpe in cveDataStore) {
@@ -241,18 +322,18 @@ function findVulnByCveId(cveId) {
 document.getElementById('riskFormulaSelect').addEventListener('change', (e) => {
     chartRiskFormula = e.target.value;
     renderEpssChart();
-    renderCiaRadarChart();
+    renderCvssHistogram();
 });
 
 document.getElementById('aggMethodSelect').addEventListener('change', (e) => {
     chartAggMethod = e.target.value;
     renderEpssChart();
-    renderCiaRadarChart();
+    renderCvssHistogram();
 });
 
 document.getElementById('riskThresholdSlider').addEventListener('input', (e) => {
     chartRiskThreshold = parseFloat(e.target.value);
     document.getElementById('thresholdValue').textContent = chartRiskThreshold.toFixed(1);
     renderEpssChart();
-    renderCiaRadarChart();
+    renderCvssHistogram();
 });

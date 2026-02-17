@@ -1,4 +1,7 @@
-#---CONFIGURATION---
+#=====================
+# IMPORTS & CONFIG
+#=====================
+
 from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__)
@@ -24,7 +27,11 @@ kev_cache = set()
 kev_cache_time = 0
 KEV_CACHE_TTL = 86400  # refresh daily
 
-##---AUTHENTICATION HELPERS---
+#=====================
+# AUTHENTICATION
+#=====================
+
+#---AUTHENTICATION HELPERS---
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -94,6 +101,10 @@ def auth_me():
         return jsonify({'authenticated': False}), 401
     return jsonify({'authenticated': True, 'user': dict(user)})
 
+#=====================
+# FRONTEND ENDPOINTS
+#=====================
+
 #---FLASK SERVES HTML---
 @app.route('/')
 def home():
@@ -115,6 +126,10 @@ def get_kev_list():
         kev_cache = fetch_kev_ids()
         kev_cache_time = time.time()
     return kev_cache
+
+#=====================
+# API ENDPOINTS
+#=====================
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
@@ -280,7 +295,9 @@ def fetch_epss_scores(cve_ids: list[str]) -> dict[str, float]:
     
     return epss_scores
 
-# ---CVE PRIORITY SCORING---
+#=====================
+# PRIORITY SCORING
+#=====================
 @app.route('/math/priority-scoring', methods=['POST'])
 def priority_score(cve, kev_list, epss_scores):
     """
@@ -359,7 +376,9 @@ def priority_score(cve, kev_list, epss_scores):
     
     return priority
 
-#---RISK FORMULAS---
+#=====================
+# RISK FORMULAS
+#=====================
 @app.route('/math/risk-formulas', methods=['POST'])
 def weighted_average_score(values, weights):
     return sum(v * w for v, w in zip(values, weights)) / sum(weights)
@@ -381,7 +400,9 @@ def max_score(values):
 def simple_mean_score(values):
     return sum(values) / len(values) if values else 0
 
-#---AGGREGATION METHODS---
+#=====================
+# AGGREGATION METHODS
+#=====================
 @app.route('/math/aggregation-methods', methods=['POST'])
 def max_agg(values):
     return max_score(values)
@@ -395,7 +416,9 @@ def median_agg(values):
 def sum_agg(values):
     return sum(values)
 
-#---RISK THRESHOLD---
+#=====================
+# RISK THRESHOLD
+#=====================
 @app.route('/math/risk-threshold', methods=['POST'])
 def count_high_risk(series, threshold=7.0):
     return (series >= threshold).sum()
