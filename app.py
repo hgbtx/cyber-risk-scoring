@@ -644,6 +644,52 @@ def ticket_resolution():
     conn.close()
     return jsonify({'success': True, 'ticket_id': ticket_id, 'isResolved': is_resolved, 'resolved': resolved_ts})
 
+#---ARCHIVE TICKET---
+@app.route('/db/ticket-archive', methods=['POST'])
+@login_required
+def ticket_archive():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    is_archived = data.get('isArchived', 0)
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Only the acceptor can archive
+    accepted = conn.execute(
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if not accepted or accepted['user_id'] != uid:
+        conn.close()
+        return jsonify({'error': 'Only the accepting user can archive this ticket'}), 403
+
+    archived_ts = None
+    if is_archived:
+        archived_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+    existing = conn.execute('SELECT id FROM archivedTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
+    if existing:
+        conn.execute(
+            'UPDATE archivedTickets SET archived = ?, isArchived = ? WHERE ticket_id = ?',
+            (archived_ts, int(is_archived), ticket_id)
+        )
+    else:
+        conn.execute(
+            'INSERT INTO archivedTickets (ticket_id, accepted_id, user_id, archived, isArchived) VALUES (?, ?, ?, ?, ?)',
+            (ticket_id, accepted['id'], uid, archived_ts, int(is_archived))
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'isArchived': is_archived, 'archived': archived_ts})
+
 #---ACCEPT TICKET---
 @app.route('/db/ticket-acceptance', methods=['POST'])
 @login_required
@@ -689,12 +735,15 @@ def load_tickets():
             resolvedTickets.isResolved AS rt_isResolved,
             acceptedTickets.accepted AS at_accepted,
             acceptedTickets.isAccepted AS at_isAccepted,
-            acceptors.email AS accepted_by_email
+            acceptors.email AS accepted_by_email,
+            archivedTickets.archived AS at_archived,
+            archivedTickets.isArchived AS at_isArchived
         FROM tickets
         JOIN users ON tickets.user_id = users.id
         LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
         LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
         LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
+        LEFT JOIN archivedTickets ON archivedTickets.ticket_id = tickets.id
     ''').fetchall()
     conn.close()
     return jsonify([{
@@ -709,7 +758,9 @@ def load_tickets():
         'accepted': r['at_accepted'] if r['at_isAccepted'] else None,
         'isAccepted': bool(r['at_isAccepted']) if r['at_isAccepted'] is not None else False,
         'accepted_by': r['accepted_by_email'] if r['at_isAccepted'] else None,
-        'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None
+        'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None,
+        'isArchived': bool(r['at_isArchived']) if r['at_isArchived'] is not None else False,
+        'archived': r['at_archived'] if r['at_isArchived'] else None,
     } for r in rows])
 
 #===========

@@ -41,13 +41,14 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
 
 // RENDER TICKETS
 function renderTickets() {
+    const visibleTickets = tickets.filter(t => !t.isArchived);
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
     if (!tickets.length) return;
 
     const uid = currentUser?.id;
 
-    for (const t of tickets) {
+    for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
         const div = document.createElement('div');
         div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
@@ -68,7 +69,15 @@ function renderTickets() {
             : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
         }
         ${t.isResolved
-            ? `<span style="font-size: 0.82em; color: #888;">Resolved by ${escapeHtml(t.resolved_by || t.accepted_by)} — ${escapeHtml(t.resolved)}</span></div>`
+            ? `<span style="font-size: 0.82em; color: #888;">Resolved by ${escapeHtml(t.resolved_by || t.accepted_by)} — ${escapeHtml(t.resolved)}</span>
+               </div>
+               <div style="display: flex; gap: 8px; margin-top: 6px;">
+               ${t.accepted_by === currentUser?.email
+                   ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
+                      <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
+                   : ''
+               }
+               </div>`
             : (t.isAccepted && t.accepted_by === currentUser?.email
                 ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>`
                 : '')
@@ -126,6 +135,53 @@ function resolveTicket(id) {
         }
     })
     .catch(e => console.error('Resolve ticket error:', e));
+}
+
+// REOPEN TICKET
+function reopenTicket(id) {
+    fetch('/db/ticket-resolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id, isResolved: 0 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.isResolved = false;
+                t.resolved = null;
+                t.resolved_by = null;
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to reopen ticket');
+        }
+    })
+    .catch(e => console.error('Reopen ticket error:', e));
+}
+
+// ARCHIVE TICKET
+function archiveTicket(id) {
+    fetch('/db/ticket-archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id, isArchived: 1 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.isArchived = true;
+                t.archived = data.archived;
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to archive ticket');
+        }
+    })
+    .catch(e => console.error('Archive ticket error:', e));
 }
 
 // DELETE TICKETS
