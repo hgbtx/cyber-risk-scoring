@@ -82,9 +82,23 @@ function renderTickets() {
                 ? `<div style="display: flex; gap: 8px;">
                      <button onclick="resolveTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
                      <button onclick="reassignTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>
+                     <button onclick="commentTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>
+                   </div>
+                   <div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
+                     <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
+                     <button onclick="submitComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Submit Comment</button>
                    </div>`
                 : '')
         }
+        ${(t.comments && t.comments.length) ? `
+            <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+                ${t.comments.map(c => `
+                    <div style="margin-bottom: 6px;">
+                        <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
+                        <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">Comment: ${escapeHtml(c.comment_description)}</p>
+                    </div>
+                `).join('')}
+            </div>` : ''}
         ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
         ${t.reassigned && !t.isAccepted ? `<span style="font-size: 0.82em; color: #888;">Reassigned by ${escapeHtml(t.reassigned_by)} — ${escapeHtml(t.reassigned)}</span>` : ''}
         </div>
@@ -115,6 +129,48 @@ function acceptTicket(id) {
         }
     })
     .catch(e => console.error('Accept ticket error:', e));
+}
+
+// COMMENT TICKET - toggle inline input
+function commentTicket(id) {
+    const container = document.getElementById(`comment-input-${id}`);
+    if (container.style.display === 'none' || !container.style.display) {
+        container.style.display = 'flex';
+        container.querySelector('textarea').focus();
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// SUBMIT COMMENT
+function submitComment(id) {
+    const textarea = document.querySelector(`#comment-input-${id} textarea`);
+    const desc = textarea.value.trim();
+    if (!desc) { alert('Please enter a comment.'); return; }
+
+    fetch('/db/ticket-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id, comment_description: desc })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                if (!t.comments) t.comments = [];
+                t.comments.push({
+                    comment_by: data.comment_by,
+                    commented: data.commented,
+                    comment_description: data.comment_description
+                });
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to add comment');
+        }
+    })
+    .catch(e => console.error('Comment ticket error:', e));
 }
 
 // REASSIGN TICKET

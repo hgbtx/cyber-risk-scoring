@@ -777,6 +777,30 @@ def ticket_reassign():
         'reassigned': reassigned_ts, 'reassigned_by': email
     })
 
+#---COMMENT TICKET---
+@app.route('/db/ticket-comment', methods=['POST'])
+@login_required
+def ticket_comment():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    comment_desc = data.get('comment_description', '').strip()
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+    if not comment_desc:
+        return jsonify({'error': 'Comment cannot be empty'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Only the current acceptor can comment
+    accepted = conn.execute(
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,))
+
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
 @login_required
@@ -790,23 +814,37 @@ def load_tickets():
             acceptedTickets.isAccepted AS at_isAccepted,
             acceptors.email AS accepted_by_email,
             archivedTickets.archived AS at_archived,
-            archivedTickets.isArchived AS at_isArchived,
-            latest_reassign.reassigned AS ra_reassigned,
-            reassigners.email AS reassigned_by_email
+            archivedTickets.isArchived AS at_isArchived
         FROM tickets
         JOIN users ON tickets.user_id = users.id
         LEFT JOIN resolvedTickets ON resolvedTickets.ticket_id = tickets.id
         LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
         LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
         LEFT JOIN archivedTickets ON archivedTickets.ticket_id = tickets.id
-        LEFT JOIN (
-            SELECT ticket_id, user_id, reassigned,
-                   ROW_NUMBER() OVER (PARTITION BY ticket_id ORDER BY id DESC) AS rn
-            FROM reassignedTickets
-        ) AS latest_reassign ON latest_reassign.ticket_id = tickets.id AND latest_reassign.rn = 1
-        LEFT JOIN users AS reassigners ON latest_reassign.user_id = reassigners.id
+    ''').fetchall()
+
+    # Fetch all comments with commenter email
+    comment_rows = conn.execute('''
+        SELECT commentTickets.ticket_id, commentTickets.commented,
+               commentTickets.comment_description, users.email AS comment_by
+        FROM commentTickets
+        JOIN users ON commentTickets.user_id = users.id
+        ORDER BY commentTickets.id ASC
     ''').fetchall()
     conn.close()
+
+    # Group comments by ticket_id
+    comments_map = {}
+    for c in comment_rows:
+        tid = c['ticket_id']
+        if tid not in comments_map:
+            comments_map[tid] = []
+        comments_map[tid].append({
+            'comment_by': c['comment_by'],
+            'commented': c['commented'],
+            'comment_description': c['comment_description']
+        })
+
     return jsonify([{
         'id': r['id'],
         'user_id': r['user_id'],
@@ -822,8 +860,7 @@ def load_tickets():
         'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None,
         'isArchived': bool(r['at_isArchived']) if r['at_isArchived'] is not None else False,
         'archived': r['at_archived'] if r['at_isArchived'] else None,
-        'reassigned': r['ra_reassigned'],
-        'reassigned_by': r['reassigned_by_email']
+        'comments': comments_map.get(r['id'], []),
     } for r in rows])
 
 #===========
