@@ -381,3 +381,39 @@ function deleteTicket(id) {
 
 // Load persisted tickets on startup
 renderTickets();
+
+// =====================
+// FILTER TICKETS
+// =====================
+
+function openFilterModal() {
+    document.getElementById('filterModal').style.display = 'flex';
+}
+
+function closeFilterModal() {
+    document.getElementById('filterModal').style.display = 'none';
+}
+
+function clearFilters() {
+    document.getElementById('filterFeature').value = '';
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterOwner').value = '';
+    document.getElementById('filterStatus').value = '';
+}
+
+function applyFilters() {
+    const feature = document.getElementById('filterFeature').value;
+    const date = document.getElementById('filterDate').value;
+    const owner = document.getElementById('filterOwner').value;
+    const status = document.getElementById('filterStatus').value;
+
+  // TODO: Add your filtering logic here
+    console.log({ feature, date, owner, status });
+
+    closeFilterModal();
+}
+
+// Close modal when clicking outside
+document.getElementById('filterModal').addEventListener('click', function(e) {
+    if (e.target === this) closeFilterModal();
+});
