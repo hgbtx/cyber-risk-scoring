@@ -72,7 +72,10 @@ function saveAssets() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assets })
-    });
+    })
+    .then(r => { if (!r.ok) console.error('save-assets failed:', r.status); return r.json(); })
+    .then(d => console.log('save-assets response:', d))
+    .catch(e => console.error('save-assets error:', e));
 }
 
 // LOAD PERSISTED DATA ON STARTUP

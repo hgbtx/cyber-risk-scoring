@@ -101,7 +101,7 @@ function renderEpssChart() {
                         }
                     }
                 },
-                legend: { position: 'bottom' },
+                legend: { display: false }
                 },
 
                 onClick: (evt, elements) => {
@@ -124,101 +124,6 @@ function renderEpssChart() {
                     displayExpandedView(vuln);
             }
         }
-    });
-}
-
-// RENDER CIA RADAR CHART
-function renderCiaRadarChart() {
-    const canvas = document.getElementById('ciaRadarChart');
-    const impactMap = { 'HIGH': 3, 'LOW': 1, 'NONE': 0 };
-
-    // Aggregate CIA scores per asset
-    const assetProfiles = {};
-
-    for (const cpe in cveDataStore) {
-        if (archivedAssets.has(cpe)) continue;
-        const data = cveDataStore[cpe];
-        if (!data?.vulnerabilities?.length) continue;
-    
-        const cScores = [], iScores = [], aScores = [];
-    
-        for (const vuln of data.vulnerabilities) {
-            const cvss = vuln.cve?.metrics?.cvssMetricV31?.[0]?.cvssData;
-            if (!cvss) continue;
-    
-            cScores.push(impactMap[cvss.confidentialityImpact] ?? 0);
-            iScores.push(impactMap[cvss.integrityImpact] ?? 0);
-            aScores.push(impactMap[cvss.availabilityImpact] ?? 0);
-        }
-    
-        if (cScores.length > 0) {
-            assetProfiles[data.title || cpe] = {
-                confidentiality: applyAggMethod(cScores),
-                integrity: applyAggMethod(iScores),
-                availability: applyAggMethod(aScores),
-            };
-        }
-    }
-
-    if (!Object.keys(assetProfiles).length) {
-        canvas.style.display = 'none';
-        if (ciaRadarChartInstance) { ciaRadarChartInstance.destroy(); ciaRadarChartInstance = null; }
-        return;
-    }
-
-    canvas.style.display = 'block';
-
-    const colors = ['#d9af6f', '#c01e19', '#4a90d9', '#50b88e', '#8b5cf6', '#e67e22'];
-    let colorIdx = 0;
-
-    const datasets = Object.entries(assetProfiles).map(([label, profile]) => {
-        const color = colors[colorIdx++ % colors.length];
-        return {
-            label,
-            data: [profile.confidentiality, profile.integrity, profile.availability],
-            backgroundColor: color + '33',
-            borderColor: color,
-            borderWidth: 2,
-            pointBackgroundColor: color,
-        };
-    });
-
-    if (ciaRadarChartInstance) ciaRadarChartInstance.destroy();
-
-    ciaRadarChartInstance = new Chart(canvas, {
-        type: 'radar',
-        data: {
-            labels: ['Confidentiality', 'Integrity', 'Availability'],
-            datasets,
-        },
-        options: {
-            responsive: true,
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: chartAggMethod === 'sum' ? undefined : 3,
-                    ticks: {
-                        stepSize: chartAggMethod === 'sum' ? undefined : 1,
-                        callback: chartAggMethod === 'sum' 
-                            ? undefined 
-                            : (val) => ['None', 'Low', '', 'High'][val] || '',
-                    },
-                    pointLabels: { font: { size: 14 } },
-                },
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => {
-                            const val = ctx.raw.toFixed(2);
-                            const axis = ctx.label;
-                            return `${ctx.dataset.label} — ${axis}: ${val}`;
-                        },
-                    },
-                },
-                legend: { position: 'bottom' },
-            },
-        },
     });
 }
 
@@ -302,7 +207,6 @@ function renderCvssHistogram() {
     });
 }
 
-
 // CVE ID FINDER FOR CHART INTERACTIONS
 function findVulnByCveId(cveId) {
     for (const cpe in cveDataStore) {
@@ -319,18 +223,21 @@ function findVulnByCveId(cveId) {
 // CHART CONFIGURATION
 // =====================
 
+// RISK FORMULA SELECTOR
 document.getElementById('riskFormulaSelect').addEventListener('change', (e) => {
     chartRiskFormula = e.target.value;
     renderEpssChart();
     renderCvssHistogram();
 });
 
+// AGGREGATION METHOD SELECTOR
 document.getElementById('aggMethodSelect').addEventListener('change', (e) => {
     chartAggMethod = e.target.value;
     renderEpssChart();
     renderCvssHistogram();
 });
 
+// RISK THRESHOLD SLIDER
 document.getElementById('riskThresholdSlider').addEventListener('input', (e) => {
     chartRiskThreshold = parseFloat(e.target.value);
     document.getElementById('thresholdValue').textContent = chartRiskThreshold.toFixed(1);
