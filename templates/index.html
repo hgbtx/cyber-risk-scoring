@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Bar</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
     <!-- Auth Overlay -->
@@ -309,8 +310,9 @@
                 <!--myTickets Tab-->
                 <div class="tab-panel" data-panel="tickets">
                     <h2>myTickets</h2>
-                    <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom: 15px; justify-content: space-between; display: flex; align-items: center; max-width: 600px;">
                         <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">&#65291; Create New Ticket</span>
+                        <span id="filterBtn" onclick="openFilterModal()" style="cursor: pointer; color: #be7a15; font-size: 1.2em;"><i class="fa-solid fa-filter"></i></span>
                     </div>
                     <div id="ticketFormContainer" style="display: none; max-width: 600px; border: 1px solid #ddd; border-radius: 6px; padding: 16px; background: #fafafa; margin-bottom: 20px;">
                         <h3 style="margin-top: 0;">New Remediation Ticket</h3>
@@ -356,6 +358,40 @@
             </div>
         </div>
     </div>
+        <div id="filterModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+            <div style="background:#fff; border-radius:10px; padding:25px; width:400px; max-width:90%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">Filter Tickets</h3>
+                <span onclick="closeFilterModal()" style="cursor:pointer; font-size:1.4em;">&times;</span>
+            </div>
+        
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Feature</label>
+            <select id="filterFeature" style="width:100%; padding:8px; margin-bottom:15px; border:1px solid #ccc; border-radius:5px;">
+                <option value="">All</option>
+            </select>
+        
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Date Created</label>
+            <input type="date" id="filterDate" style="width:100%; padding:8px; margin-bottom:15px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
+        
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Ticket Owner</label>
+            <select id="filterOwner" style="width:100%; padding:8px; margin-bottom:15px; border:1px solid #ccc; border-radius:5px;">
+                <option value="">All</option>
+            </select>
+        
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Ticket Status</label>
+            <select id="filterStatus" style="width:100%; padding:8px; margin-bottom:20px; border:1px solid #ccc; border-radius:5px;">
+                <option value="">All</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Closed">Closed</option>
+            </select>
+        
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="clearFilters()" style="padding:8px 16px; border:1px solid #ccc; border-radius:5px; background:#fff; cursor:pointer;">Clear</button>
+                <button onclick="applyFilters()" style="padding:8px 16px; border:none; border-radius:5px; background:#be7a15; color:#fff; cursor:pointer;">Apply</button>
+            </div>
+            </div>
+        </div>
 </body>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
