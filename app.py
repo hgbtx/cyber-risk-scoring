@@ -799,7 +799,27 @@ def ticket_comment():
 
     # Only the current acceptor can comment
     accepted = conn.execute(
-        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,))
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if not accepted or accepted['user_id'] != uid:
+        conn.close()
+        return jsonify({'error': 'Only the accepting user can comment on this ticket'}), 403
+
+    commented_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+
+    conn.execute(
+        'INSERT INTO commentTickets (ticket_id, accepted_id, user_id, commented, comment_description) VALUES (?, ?, ?, ?, ?)',
+        (ticket_id, accepted['id'], uid, commented_ts, comment_desc)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'success': True, 'ticket_id': ticket_id,
+        'commented': commented_ts, 'comment_by': email,
+        'comment_description': comment_desc
+    })
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])

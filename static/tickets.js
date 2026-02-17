@@ -95,7 +95,7 @@ function renderTickets() {
                 ${t.comments.map(c => `
                     <div style="margin-bottom: 6px;">
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
-                        <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">Comment: ${escapeHtml(c.comment_description)}</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${escapeHtml(c.comment_description)}</p>
                     </div>
                 `).join('')}
             </div>` : ''}
