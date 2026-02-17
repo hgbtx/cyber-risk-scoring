@@ -2,6 +2,7 @@
 // SEARCH RESULT FILTERS
 // ======================
 
+// CPE PARSER
 function parseCpeParts(cpeName) {
     // cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
     const parts = cpeName.split(':');
@@ -19,6 +20,7 @@ function parseCpeParts(cpeName) {
     };
 }
 
+// GET CURRENT FILTER VALUES
 function getActiveFilters() {
     return {
         deprecated: document.getElementById('filterDeprecated').value,
@@ -36,6 +38,7 @@ function getActiveFilters() {
     };
 }
 
+// APPLY FILTERS TO CURRENT RESULTS
 function applyResultFilters() {
     const filters = getActiveFilters();
     const filtered = allResults.filter(r => {
@@ -70,16 +73,12 @@ function applyResultFilters() {
         return true;
     });
 
-    // Temporarily swap allResults for rendering, then restore
-    const original = allResults;
-    allResults = filtered;
+    window._filteredResults = filtered;
     currentPage = 1;
     renderPage();
-    allResults = original;
-    // Store filtered set for pagination
-    window._filteredResults = filtered;
 }
 
+// ENABLE/DISABLE FILTER FIELDS BASED ON RESULT VARIANCE
 function updateFilterFieldStates() {
     const fieldMap = {
         filterDeprecated: r => String(r.cpeData?.deprecated ?? false),
@@ -112,8 +111,8 @@ function updateFilterFieldStates() {
     });
 }
 
+// EVENT LISTENERS
 document.getElementById('applyFilters').addEventListener('click', applyResultFilters);
-
 document.getElementById('clearFilters').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('filterDeprecated').value = '';
