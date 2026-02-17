@@ -52,63 +52,79 @@ function renderTickets() {
         const isOwner = (t.user_id === uid || !t.user_id);
         const div = document.createElement('div');
         div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
-        div.innerHTML = `
+        div.innerHTML = div.innerHTML = `
+        <!-- Header row -->
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong>Ticket #${t.id}</strong>
             <span style="font-size: 0.8em; color: #888;">${escapeHtml(t.created)}</span>
         </div>
+    
+        <!-- Feature tag + creator -->
         <div style="margin-top: 4px; display: flex; gap: 6px; align-items: center;">
             <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600;">${escapeHtml(t.feature)}</span>
             <span style="font-size: 0.78em; color: #888;">by ${escapeHtml(t.creator_email || 'unknown')}</span>
         </div>
+    
+        <!-- Description -->
         <p style="margin: 8px 0;">${escapeHtml(t.description)}</p>
+    
+        <!-- Buttons row -->
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        ${t.isAccepted
-            ? `<div style="display: flex; flex-direction: column; gap: 2px;">
-                <span style="font-size: 0.82em; color: #888;"></span></div>`
-            : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
-        }
-        ${t.isResolved
-            ? `<div style="display: flex; gap: 8px; margin-top: 6px;">
-               ${t.accepted_by === currentUser?.email
-                   ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
-                      <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
-                   : ''
-               }
-               </div>`
-               : (t.isAccepted && t.accepted_by === currentUser?.email
-                ? `<div style="display: flex; gap: 8px;">
-                     <button onclick="resolveTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
-                     <button onclick="reassignTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>
-                     <button onclick="commentTicket(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>
-                   </div>
-                   <div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
-                     <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
-                     <button onclick="submitComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Submit Comment</button>
-                   </div>`
-                : '')
-        }
-        ${isOwner && !t.isAccepted ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>` : ''}
-        ${(t.comments && t.comments.length) ? `
-            <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+            ${t.isAccepted
+                ? `<div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.82em; color: #888;"></span>
+                </div>`
+                : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
+            }
+            ${t.isResolved
+                ? `${t.accepted_by === currentUser?.email
+                    ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
+                    <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
+                    : ''
+                }`
+                : (t.isAccepted && t.accepted_by === currentUser?.email
+                    ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
+                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>
+                    <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
+                    : '')
+            }
+            ${isOwner && !t.isAccepted
+                ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>`
+                : ''}
+        </div>
+    
+        <!-- Comment input (below buttons) -->
+        ${t.isAccepted && !t.isResolved && t.accepted_by === currentUser?.email
+            ? `<div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
+                <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
+                <button onclick="submitComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Submit Comment</button>
+            </div>`
+            : ''}
+    
+        <!-- Comments section (below buttons) -->
+        ${t.comments && t.comments.length
+            ? `<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
                 ${t.comments.map(c => `
                     <div style="margin-bottom: 6px;">
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${escapeHtml(c.comment_description)}</p>
                     </div>
                 `).join('')}
-            </div>` : ''}
-            ${t.activity && t.activity.length ? `
-                <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
-                    ${t.activity.map(a => `
-                        <div style="margin-bottom: 4px;">
-                            <span style="font-size: 0.82em; color: #888;">
-                                ${escapeHtml(a.action)} by ${escapeHtml(a.action_by)} — ${escapeHtml(a.timestamp)}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>` : ''}
-        </div>
+            </div>`
+            : ''}
+    
+        <!-- Activity log (below buttons) -->
+        ${t.activity && t.activity.length
+            ? `<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+                ${t.activity.map(a => `
+                    <div style="margin-bottom: 4px;">
+                        <span style="font-size: 0.82em; color: #888;">
+                            ${escapeHtml(a.action)} by ${escapeHtml(a.action_by)} — ${escapeHtml(a.timestamp)}
+                        </span>
+                    </div>
+                `).join('')}
+            </div>`
+            : ''}
     `;
         container.appendChild(div);
     }
@@ -131,7 +147,7 @@ function acceptTicket(id) {
                 t.accepted_by = data.accepted_by;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
-                    action: 'accepted',
+                    action: 'Accepted',
                     action_by: currentUser?.email,
                     timestamp: data.accepted
                 });
@@ -208,7 +224,7 @@ function reassignTicket(id) {
                 t.reassigned_by = data.reassigned_by;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
-                    action: 'reassigned',
+                    action: 'Reassigned',
                     action_by: currentUser?.email,
                     timestamp: data.reassigned
                 });
@@ -238,7 +254,7 @@ function resolveTicket(id) {
                 t.resolved_by = currentUser?.email;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
-                    action: 'resolved',
+                    action: 'Resolved',
                     action_by: currentUser?.email,
                     timestamp: data.resolved
                 });
@@ -268,7 +284,7 @@ function reopenTicket(id) {
                 t.resolved_by = null;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
-                    action: 'reopened',
+                    action: 'Reopened',
                     action_by: currentUser?.email,
                     timestamp: new Date().toLocaleString()
                 });
@@ -297,7 +313,7 @@ function archiveTicket(id) {
                 t.archived = data.archived;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
-                    action: 'archived',
+                    action: 'Archived',
                     action_by: currentUser?.email,
                     timestamp: data.archived
                 });
