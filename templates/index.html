@@ -385,9 +385,15 @@
                 <option value="">All</option>
                 <option value="Open">Open</option>
                 <option value="In Progress">In Progress</option>
-                <option value="Closed">Closed</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Archived">Archived</option>
             </select>
         
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:20px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="filterIncludeArchived" style="accent-color:#be7a15; width:16px; height:16px;">
+                Include Archived Tickets
+            </label>
+
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button onclick="clearFilters()" style="padding:8px 16px; border:1px solid #ccc; border-radius:5px; background:#fff; cursor:pointer;">Clear</button>
                 <button onclick="applyFilters()" style="padding:8px 16px; border:none; border-radius:5px; background:#be7a15; color:#fff; cursor:pointer;">Apply</button>

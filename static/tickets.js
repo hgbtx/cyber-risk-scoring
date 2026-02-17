@@ -40,11 +40,13 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
 });
 
 // RENDER TICKETS
-function renderTickets() {
-    const visibleTickets = tickets.filter(t => !t.isArchived);
+function renderTickets(filteredList, includeArchived) {
+    const visibleTickets = filteredList
+        ? filteredList
+        : tickets.filter(t => !t.isArchived || includeArchived);
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
-    if (!tickets.length) return;
+    if (!visibleTickets.length) return;
 
     const uid = currentUser?.id;
 
@@ -363,7 +365,7 @@ function archiveTicket(id) {
                     timestamp: data.archived
                 });
             }
-            statusTicket(id, 'Resolved');
+            statusTicket(id, 'Archived');
             renderTickets();
         } else {
             alert(data.error || 'Failed to archive ticket');
@@ -386,7 +388,26 @@ renderTickets();
 // FILTER TICKETS
 // =====================
 
+function populateFilterDropdowns() {
+    const featureSelect = document.getElementById('filterFeature');
+    const ownerSelect = document.getElementById('filterOwner');
+
+    featureSelect.innerHTML = '<option value="">All</option>';
+    ownerSelect.innerHTML = '<option value="">All</option>';
+
+    const features = [...new Set(tickets.map(t => t.feature).filter(Boolean))];
+    const owners = [...new Set(tickets.map(t => t.creator_email || t.user_id).filter(Boolean))];
+
+    features.forEach(f => {
+        featureSelect.innerHTML += `<option value="${f}">${f}</option>`;
+    });
+    owners.forEach(o => {
+        ownerSelect.innerHTML += `<option value="${o}">${o}</option>`;
+    });
+}
+
 function openFilterModal() {
+    populateFilterDropdowns();
     document.getElementById('filterModal').style.display = 'flex';
 }
 
@@ -399,6 +420,7 @@ function clearFilters() {
     document.getElementById('filterDate').value = '';
     document.getElementById('filterOwner').value = '';
     document.getElementById('filterStatus').value = '';
+    renderTickets();
 }
 
 function applyFilters() {
@@ -406,10 +428,22 @@ function applyFilters() {
     const date = document.getElementById('filterDate').value;
     const owner = document.getElementById('filterOwner').value;
     const status = document.getElementById('filterStatus').value;
+    const includeArchived = document.getElementById('filterIncludeArchived').checked;
 
-  // TODO: Add your filtering logic here
-    console.log({ feature, date, owner, status });
+    let filtered = includeArchived ? [...tickets] : tickets.filter(t => !t.isArchived);
 
+    if (feature) filtered = filtered.filter(t => t.feature === feature);
+    if (owner) filtered = filtered.filter(t => (t.creator_email || String(t.user_id)) === owner);
+    if (status) filtered = filtered.filter(t => t.status === status);
+    if (date) {
+        filtered = filtered.filter(t => {
+            const created = new Date(t.created);
+            const filterDate = new Date(date);
+            return created.toDateString() === filterDate.toDateString();
+        });
+    }
+
+    renderTickets(filtered, includeArchived);
     closeFilterModal();
 }
 
