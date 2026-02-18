@@ -156,7 +156,10 @@ function updateFilterFieldStates() {
 }
 
 // EVENT LISTENERS
-document.getElementById('applyFilters').addEventListener('click', applyResultFilters);
+document.getElementById('applyFilters').addEventListener('click', () => {
+    applyResultFilters();
+    document.getElementById('searchFilterModal').style.display = 'none';
+});
 document.getElementById('searchFilterModal').style.display = 'none';
 document.getElementById('clearFilters').addEventListener('click', (e) => {
     e.preventDefault();
