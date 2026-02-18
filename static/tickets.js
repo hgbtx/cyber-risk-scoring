@@ -129,7 +129,10 @@ function renderTickets() {
         ${t.isAccepted && !t.isResolved && t.accepted_by === currentUser?.email
             ? `<div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
                 <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
-                <button onclick="submitComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Submit Comment</button>
+                <div style="display: flex; gap: 6px;">
+                    <button onclick="submitComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Submit Comment</button>
+                    <button onclick="cancelComment(${t.id})" style="width: fit-content; padding: 4px 12px; background-color: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Cancel</button>
+                </div>
             </div>`
             : ''}
     
@@ -261,6 +264,13 @@ function submitComment(id) {
         }
     })
     .catch(e => console.error('Comment ticket error:', e));
+}
+
+// CANCEL COMMENT
+function cancelComment(id) {
+    const container = document.getElementById(`comment-input-${id}`);
+    container.querySelector('textarea').value = '';
+    container.style.display = 'none';
 }
 
 // REASSIGN TICKET
