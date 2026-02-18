@@ -747,12 +747,17 @@ body {
     NOUISLIDER CUSTOMIZATION
 =========================== */
 
+.noUi-connect {
+    background: #d9d9d9 !important;
+}
+
 /* noUiSlider – round handles */
 .noUi-handle {
+    background: #be7a15 !important;
     border-radius: 50% !important;
-    width: 18px !important;
-    height: 18px !important;
-    top: -5px !important;
+    width: 24px !important;
+    height: 24px !important;
+    top: -3.75px !important;
     right: -9px !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
 }
