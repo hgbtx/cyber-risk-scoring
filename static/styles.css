@@ -787,3 +787,53 @@ body {
     pointer-events: none;
     z-index: 0;
 }
+
+/* ========================
+    UFO LOADER
+=========================== */
+#searchingContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    width: 100%;
+    max-width: 600px;
+}
+@keyframes hover {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-20px); }
+}
+
+@keyframes wobble {
+0%, 100% { transform: rotate(-3deg); }
+50%       { transform: rotate(3deg); }
+}
+
+@keyframes glow {
+0%, 100% { filter: drop-shadow(0 0 6px rgba(0, 255, 180, 0.6)); }
+50%       { filter: drop-shadow(0 0 18px rgba(0, 255, 180, 1)); }
+}
+
+@keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75% { content: '...'; }
+}
+
+.dots::after {
+    content: '.';
+    animation: dots 2s steps(1) infinite;
+    display: inline-block;
+    width: 1.5ch;
+    text-align: left;
+}
+
+.ufo {
+animation:
+    hover  3s ease-in-out infinite,
+    wobble 4s ease-in-out infinite,
+    glow   2s ease-in-out infinite;
+width: 90px;
+height: auto;
+}
