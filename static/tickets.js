@@ -40,10 +40,26 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
 });
 
 // RENDER TICKETS
-function renderTickets(filteredList, includeArchived) {
-    const visibleTickets = filteredList
-        ? filteredList
-        : tickets.filter(t => !t.isArchived || includeArchived);
+function renderTickets() {
+    let visibleTickets;
+
+    if (activeTicketFilter) {
+        const { feature, date, owner, status, includeArchived } = activeTicketFilter;
+        visibleTickets = includeArchived ? [...tickets] : tickets.filter(t => !t.isArchived);
+        if (feature) visibleTickets = visibleTickets.filter(t => t.feature === feature);
+        if (owner) visibleTickets = visibleTickets.filter(t => (t.creator_email || String(t.user_id)) === owner);
+        if (status) visibleTickets = visibleTickets.filter(t => t.status === status);
+        if (date) {
+            visibleTickets = visibleTickets.filter(t => {
+                const created = new Date(t.created);
+                const fd = new Date(date);
+                return created.toDateString() === fd.toDateString();
+            });
+        }
+    } else {
+        visibleTickets = tickets.filter(t => !t.isArchived);
+    }
+
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
     if (!visibleTickets.length) return;
@@ -422,6 +438,7 @@ function clearFilters() {
     document.getElementById('filterOwner').value = '';
     document.getElementById('filterStatus').value = '';
     document.getElementById('filterIncludeArchived').checked = false;
+    activeTicketFilter = null;
     renderTickets();
 }
 
@@ -432,20 +449,9 @@ function applyFilters() {
     const status = document.getElementById('filterStatus').value;
     const includeArchived = document.getElementById('filterIncludeArchived').checked;
 
-    let filtered = includeArchived ? [...tickets] : tickets.filter(t => !t.isArchived);
+    activeTicketFilter = { feature, date, owner, status, includeArchived };
 
-    if (feature) filtered = filtered.filter(t => t.feature === feature);
-    if (owner) filtered = filtered.filter(t => (t.creator_email || String(t.user_id)) === owner);
-    if (status) filtered = filtered.filter(t => t.status === status);
-    if (date) {
-        filtered = filtered.filter(t => {
-            const created = new Date(t.created);
-            const filterDate = new Date(date);
-            return created.toDateString() === filterDate.toDateString();
-        });
-    }
-
-    renderTickets(filtered, includeArchived);
+    renderTickets();
     closeFilterModal();
 }
 
