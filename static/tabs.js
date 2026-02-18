@@ -18,8 +18,9 @@ tabButtons.forEach(button => {
         document.getElementById('chartConfig').style.display = button.dataset.tab === 'charts' ? 'flex' : 'none';
         
         // Show/hide filter panel based on active tab
-        const filterPanel = document.getElementById('searchFilterPanel');
-        filterPanel.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'block' : 'none';
+        // Show/hide filter button based on active tab
+        const filterBtn = document.getElementById('openSearchFilterModal');
+        filterBtn.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'inline-block' : 'none';
         // Show/hide Assets drop zone and CVE counter based on active tab
         const dropZone = document.getElementById('dropZone');
         const cveCountsContainer = document.querySelector('.cveCounts-container');

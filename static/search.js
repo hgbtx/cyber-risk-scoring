@@ -8,6 +8,8 @@ async function performSearch() {
     if (searchTerm) {
         searchButton.disabled = true;
         searchButton.textContent = 'Searching...';
+        document.getElementById('searchingContainer').style.display = 'block';
+        document.getElementById('resultsContainer').style.display = 'none';
         try {
             const response = await fetch('/api/search', {
                 method: 'POST',
@@ -26,6 +28,7 @@ async function performSearch() {
         } finally {
             searchButton.disabled = false;
             searchButton.textContent = 'Search';
+            document.getElementById('searchingContainer').style.display = 'none';
         }
     }
 }
@@ -93,6 +96,8 @@ async function performAdvancedSearch() {
     const btn = document.getElementById('advSearchButton');
     btn.disabled = true;
     btn.textContent = 'Searching...';
+    document.getElementById('searchingContainer').style.display = 'block';
+    document.getElementById('resultsContainer').style.display = 'none';
 
     try {
         const response = await fetch('/api/search', {
@@ -108,6 +113,7 @@ async function performAdvancedSearch() {
     } finally {
         btn.disabled = false;
         btn.textContent = 'Search';
+        document.getElementById('searchingContainer').style.display = 'none';
     }
 }
 
@@ -145,7 +151,7 @@ function displayResults(results) {
     renderPage();
     document.getElementById('clearResults').style.display = 'inline';
     
-    document.getElementById('searchFilterPanel').style.display = 'block';
+    document.getElementById('openSearchFilterModal').style.display = 'inline-block';
     document.getElementById('clearFilters').click();
 
     // Convert filter fields to dropdowns when multiple values exist
@@ -195,7 +201,7 @@ function displayResults(results) {
     
     initDateSlider(results);
     
-    document.getElementById('searchFilterPanel').style.display = 'block';
+    document.getElementById('openSearchFilterModal').style.display = 'inline-block';
     updateFilterFieldStates();
 }
 
@@ -296,7 +302,9 @@ document.getElementById('clearResults').addEventListener('click', (e) => {
     currentPage = 1;
     resultsList.innerHTML = '';
     resultsContainer.style.display = 'none';
-    document.getElementById('searchFilterPanel').style.display = 'none';
+    document.getElementById('openSearchFilterModal').style.display = 'none';
+    document.getElementById('searchFilterModal').style.display = 'none';
     searchInput.value = '';
-    document.getElementById('searchFilterPanel').style.display = 'none';
+    document.getElementById('openSearchFilterModal').style.display = 'none';
+    document.getElementById('searchFilterModal').style.display = 'none';
 });

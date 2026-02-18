@@ -174,6 +174,7 @@ function updateFilterFieldStates() {
 
 // EVENT LISTENERS
 document.getElementById('applyFilters').addEventListener('click', applyResultFilters);
+document.getElementById('searchFilterModal').style.display = 'none';
 document.getElementById('clearFilters').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('filterDeprecated').value = '';
@@ -193,4 +194,15 @@ document.getElementById('clearFilters').addEventListener('click', (e) => {
     currentPage = 1;
     window._filteredResults = null;
     renderPage();
+});
+
+// FILTER MODAL OPEN/CLOSE
+document.getElementById('openSearchFilterModal').addEventListener('click', () => {
+    document.getElementById('searchFilterModal').style.display = 'flex';
+});
+document.getElementById('closeFilterModal').addEventListener('click', () => {
+    document.getElementById('searchFilterModal').style.display = 'none';
+});
+document.getElementById('searchFilterModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
 });

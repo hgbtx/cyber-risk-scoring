@@ -82,72 +82,78 @@
                     <input type="range" id="riskThresholdSlider" min="0" max="10" step="0.5" value="7">
                 </div>
             </div>
-            <!--Search Filters-->
-            <div class="filter-panel" id="searchFilterPanel" style="display: none;">
-                <h3>Filters</h3>
-                <div class="filter-fields">
-                    <div class="filter-field">
-                        <label for="filterDeprecated">Deprecated</label>
-                        <select id="filterDeprecated">
-                            <option value="">Any</option>
-                            <option value="false">No</option>
-                            <option value="true">Yes</option>
-                        </select>
+            <!--Search Filters Modal-->
+            <div class="modal-overlay" id="searchFilterModal" style="display: none;">
+                <div class="modal-content filter-panel">
+                    <div class="modal-header">
+                        <h3>Filters</h3>
+                        <button class="modal-close-btn" id="closeFilterModal">&times;</button>
                     </div>
-                    <div class="filter-field">
-                        <label>Date(s) Created</label>
-                        <div id="dateSliderContainer" style="position:relative; height:36px; margin-top:4px;">
-                            <input type="range" id="filterDateFrom" min="0" max="100" value="0" style="position:absolute; width:100%; pointer-events:none; background:none; -webkit-appearance:none; appearance:none; height:6px; top:14px; z-index:2;">
-                            <input type="range" id="filterDateTo" min="0" max="100" value="100" style="position:absolute; width:100%; pointer-events:none; background:none; -webkit-appearance:none; appearance:none; height:6px; top:14px; z-index:2;">
-                            <div id="dateSliderTrack" style="position:absolute; height:6px; background:#ddd; border-radius:3px; width:100%; top:14px; z-index:0;"></div>
-                            <div id="dateSliderRange" style="position:absolute; height:6px; background:#d9af6f; border-radius:3px; top:14px; z-index:1;"></div>
+                    <div class="filter-fields">
+                        <div class="filter-field">
+                            <label for="filterDeprecated">Deprecated</label>
+                            <select id="filterDeprecated">
+                                <option value="">Any</option>
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:0.75em; color:#888;">
-                            <span id="dateSliderMinLabel">—</span>
-                            <span id="dateSliderMaxLabel">—</span>
+                        <div class="filter-field">
+                            <label>Date(s) Created</label>
+                            <div id="dateSliderContainer" style="position:relative; height:36px; margin-top:4px;">
+                                <input type="range" id="filterDateFrom" min="0" max="100" value="0" style="position:absolute; width:100%; pointer-events:none; background:none; -webkit-appearance:none; appearance:none; height:6px; top:14px; z-index:2;">
+                                <input type="range" id="filterDateTo" min="0" max="100" value="100" style="position:absolute; width:100%; pointer-events:none; background:none; -webkit-appearance:none; appearance:none; height:6px; top:14px; z-index:2;">
+                                <div id="dateSliderTrack" style="position:absolute; height:6px; background:#ddd; border-radius:3px; width:100%; top:14px; z-index:0;"></div>
+                                <div id="dateSliderRange" style="position:absolute; height:6px; background:#d9af6f; border-radius:3px; top:14px; z-index:1;"></div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.75em; color:#888;">
+                                <span id="dateSliderMinLabel">—</span>
+                                <span id="dateSliderMaxLabel">—</span>
+                            </div>
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterVendor">Vendor</label>
+                            <input type="text" id="filterVendor" placeholder="e.g. microsoft">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterProduct">Product</label>
+                            <input type="text" id="filterProduct" placeholder="e.g. windows">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterVersion">Version</label>
+                            <input type="text" id="filterVersion" placeholder="e.g. 1.0">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterUpdate">Update</label>
+                            <input type="text" id="filterUpdate" placeholder="e.g. sp1">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterEdition">Edition</label>
+                            <input type="text" id="filterEdition" placeholder="e.g. enterprise">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterLanguage">Language</label>
+                            <input type="text" id="filterLanguage" placeholder="e.g. en">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterSwEdition">SW Edition</label>
+                            <input type="text" id="filterSwEdition" placeholder="e.g. pro">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterTargetSw">Target SW</label>
+                            <input type="text" id="filterTargetSw" placeholder="e.g. windows">
+                        </div>
+                        <div class="filter-field">
+                            <label for="filterTargetHw">Target HW</label>
+                            <input type="text" id="filterTargetHw" placeholder="e.g. x64">
                         </div>
                     </div>
-                    <div class="filter-field">
-                        <label for="filterVendor">Vendor</label>
-                        <input type="text" id="filterVendor" placeholder="e.g. microsoft">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterProduct">Product</label>
-                        <input type="text" id="filterProduct" placeholder="e.g. windows">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterVersion">Version</label>
-                        <input type="text" id="filterVersion" placeholder="e.g. 1.0">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterUpdate">Update</label>
-                        <input type="text" id="filterUpdate" placeholder="e.g. sp1">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterEdition">Edition</label>
-                        <input type="text" id="filterEdition" placeholder="e.g. enterprise">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterLanguage">Language</label>
-                        <input type="text" id="filterLanguage" placeholder="e.g. en">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterSwEdition">SW Edition</label>
-                        <input type="text" id="filterSwEdition" placeholder="e.g. pro">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterTargetSw">Target SW</label>
-                        <input type="text" id="filterTargetSw" placeholder="e.g. windows">
-                    </div>
-                    <div class="filter-field">
-                        <label for="filterTargetHw">Target HW</label>
-                        <input type="text" id="filterTargetHw" placeholder="e.g. x64">
+                    <div class="modal-footer">
+                        <a href="#" id="clearFilters" class="advanced-search-link">Clear Filters</a>
+                        <button id="applyFilters" class="filter-apply-btn">Apply</button>
                     </div>
                 </div>
-                <button id="applyFilters" class="filter-apply-btn">Apply</button>
-                <a href="#" id="clearFilters" class="advanced-search-link">Clear Filters</a>
             </div>
-        </div>
 
         <!-- Tab Container -->
         <div class="tab-container" style="display: flex; flex-direction: column;">
@@ -229,12 +235,15 @@
                         </div>
                     </div>
                     <!--Results Container-->
-                    <div id="searchingContainer">
+                    <div id="searchingContainer" style="display: none;">
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%;">
                             <img class="ufo" src="/static/img/ufo4.svg" alt="UFO" />
                             <p style="font-size: 1.2em; color: #888;">Searching<span class="dots"></span></p>
                         </div>
                     </div>
+                    <span id="openSearchFilterModal" style="display:none; cursor:pointer; color:#be7a15; font-size:1.2em;">
+                        <i class="fa-solid fa-filter"></i> Filters
+                    </span>
                     <div id="resultsContainer" style="display: none;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <h2>Results</h2>
