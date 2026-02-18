@@ -335,6 +335,32 @@
                             </table>
                         </div>
                     </div>
+                    <div id="cpeDetailView" style="display: none;">
+                        <a href="#" id="cpeDetailBackToFolders" class="cve-folder-back">Folder View</a>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <h3>CPE Asset Records</h3>
+                            <button class="folder-dl-btn" onclick="downloadCveCSV()">CSV</button>
+                            <button class="folder-dl-btn" onclick="downloadCveJSON()">JSON</button>
+                        </div>
+                        <div class="cve-folder-scroll">
+                            <table id="cpeDetailTable" class="cve-detail-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="title">Title <span class="sort-arrow"></span></th>
+                                        <th data-sort="part">Part <span class="sort-arrow"></span></th>
+                                        <th data-sort="vendor">Vendor <span class="sort-arrow"></span></th>
+                                        <th data-sort="product">Product <span class="sort-arrow"></span></th>
+                                        <th data-sort="version">Version <span class="sort-arrow"></span></th>
+                                        <th data-sort="deprecated">Deprecated <span class="sort-arrow"></span></th>
+                                        <th data-sort="created">Created <span class="sort-arrow"></span></th>
+                                        <th data-sort="lastModified">Last Modified <span class="sort-arrow"></span></th>
+                                        <th data-sort="cveCount">CVEs <span class="sort-arrow"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cpeDetailBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!--myTickets Tab-->

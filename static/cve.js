@@ -264,6 +264,7 @@ function renderCveGrid() {
     grid.innerHTML = '';
     folderView.style.display = 'none';
     document.getElementById('cpeInfoIcon').style.display = 'none';
+    document.getElementById('cpeDetailView').style.display = 'none';
     grid.style.display = 'grid';
 
     if (Object.keys(cveDataStore).length > 0) {
@@ -297,7 +298,134 @@ function renderCveGrid() {
     if (!Object.keys(cveDataStore).length) {
         grid.innerHTML = '<p style="color: #999; font-style: italic;">Add assets to view CVE details.</p>';
     }
+    // Add Detail View toggle at the top of the grid (insert after grid.style.display = 'grid')
+    if (Object.keys(cveDataStore).length > 0) {
+        const detailToggle = document.createElement('div');
+        detailToggle.style.cssText = 'grid-column: 1 / -1; margin-bottom: 4px;';
+        detailToggle.innerHTML = `<a href="#" id="switchToDetailView" class="cve-folder-back">Detail View</a>`;
+        grid.prepend(detailToggle);
+
+        document.getElementById('switchToDetailView').addEventListener('click', (e) => {
+            e.preventDefault();
+            renderCpeDetailView();
+        });
+    }
 }
+
+// RENDER CPE DETAIL VIEW (table of all CPE records)
+function renderCpeDetailView() {
+    const grid = document.getElementById('cveGrid');
+    const folderView = document.getElementById('cveFolderView');
+    const detailView = document.getElementById('cpeDetailView');
+    grid.style.display = 'none';
+    folderView.style.display = 'none';
+    detailView.style.display = 'block';
+
+    const body = document.getElementById('cpeDetailBody');
+    body.innerHTML = '';
+
+    // Build row data from cveDataStore
+    let rows = [];
+    for (const cpe in cveDataStore) {
+        if (archivedAssets.has(cpe)) continue;
+        const data = cveDataStore[cpe];
+        const cpeInfo = cpeDataStore[cpe] || data?.cpeData || null;
+        const parts = cpe.split(':');
+        const partMap = { a: 'Application', h: 'Hardware', o: 'OS' };
+
+        rows.push({
+            title: data.title || cpeInfo?.titles?.[0]?.title || cpe,
+            cpeName: cpe,
+            part: partMap[parts[2]] || parts[2] || '*',
+            vendor: parts[3] || '*',
+            product: parts[4] || '*',
+            version: parts[5] || '*',
+            deprecated: cpeInfo ? String(cpeInfo.deprecated ?? 'N/A') : 'N/A',
+            created: cpeInfo?.created || 'N/A',
+            lastModified: cpeInfo?.lastModified || 'N/A',
+            cveCount: data.count || 0,
+            _cpe: cpe,
+            _data: data
+        });
+    }
+
+    // Sort
+    rows.sort((a, b) => {
+        let va = a[cpeDetailSortKey];
+        let vb = b[cpeDetailSortKey];
+        if (cpeDetailSortKey === 'cveCount') {
+            va = va ?? -1;
+            vb = vb ?? -1;
+            return cpeDetailSortDir === 'asc' ? va - vb : vb - va;
+        }
+        if (['created', 'lastModified'].includes(cpeDetailSortKey)) {
+            const da = va && va !== 'N/A' ? new Date(va).getTime() : 0;
+            const db = vb && vb !== 'N/A' ? new Date(vb).getTime() : 0;
+            return cpeDetailSortDir === 'asc' ? da - db : db - da;
+        }
+        va = String(va).toLowerCase();
+        vb = String(vb).toLowerCase();
+        return cpeDetailSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+
+    // Update header arrows
+    document.querySelectorAll('#cpeDetailTable thead th[data-sort]').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === cpeDetailSortKey) {
+            th.classList.add(cpeDetailSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+
+    // Render rows
+    for (const row of rows) {
+        const tr = document.createElement('tr');
+        const createdFmt = row.created && row.created !== 'N/A' ? new Date(row.created).toLocaleDateString() : 'N/A';
+        const modifiedFmt = row.lastModified && row.lastModified !== 'N/A' ? new Date(row.lastModified).toLocaleDateString() : 'N/A';
+
+        tr.innerHTML = `
+            <td><strong>${escapeHtml(row.title)}</strong></td>
+            <td>${escapeHtml(row.part)}</td>
+            <td>${escapeHtml(row.vendor)}</td>
+            <td>${escapeHtml(row.product)}</td>
+            <td>${escapeHtml(row.version)}</td>
+            <td>${escapeHtml(row.deprecated)}</td>
+            <td>${escapeHtml(createdFmt)}</td>
+            <td>${escapeHtml(modifiedFmt)}</td>
+            <td>${row.cveCount}</td>
+        `;
+
+        // Click row to open the CPE's CVE folder
+        tr.addEventListener('click', () => {
+            openCveFolder(row._cpe, row._data);
+        });
+
+        body.appendChild(tr);
+    }
+
+    // Attach sort listeners (only once)
+    if (!detailView.dataset.sortBound) {
+        detailView.dataset.sortBound = 'true';
+        document.querySelectorAll('#cpeDetailTable thead th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (cpeDetailSortKey === key) {
+                    cpeDetailSortDir = cpeDetailSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    cpeDetailSortKey = key;
+                    cpeDetailSortDir = 'asc';
+                }
+                renderCpeDetailView();
+            });
+        });
+    }
+}
+
+// CPE DETAIL VIEW back button
+document.getElementById('cpeDetailBackToFolders').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('cpeDetailView').style.display = 'none';
+    renderCveGrid();
+});
 
 // OPEN CVE FOLDER VIEW
 function openCveFolder(cpe, data) {

@@ -23,6 +23,8 @@ let cvssHistogramInstance = null;
 let _dateSliderDates = []; // sorted unique date strings
 let activeTicketFilter = null;
 let _publishedDateSliderDates = [];
+let cpeDetailSortKey = 'title';
+let cpeDetailSortDir = 'asc';
 
 // =====================
 // DOM REFERENCES
