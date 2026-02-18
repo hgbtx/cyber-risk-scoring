@@ -61,8 +61,7 @@ def init_db():
         );
         
         CREATE TABLE IF NOT EXISTS cpe_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cpeName TEXT UNIQUE NOT NULL,
+            cpeName TEXT PRIMARY KEY NOT NULL UNIQUE,
             cpeData TEXT,
             fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
         );

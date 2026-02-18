@@ -311,6 +311,7 @@ body {
     background-color: #f5f5f495;
     max-width: 250px;
     overflow: hidden;
+    min-height: 500px;
     max-height: 80vh;
     overflow-y: auto;
 }

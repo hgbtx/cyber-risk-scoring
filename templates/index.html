@@ -243,13 +243,17 @@
                             <p style="font-size: 1.2em; color: #888;">Searching<span class="dots"></span></p>
                         </div>
                     </div>
-                    <span id="openSearchFilterModal" style="display:none; cursor:pointer; color:#be7a15; font-size:1.2em;">
-                        <i class="fa-solid fa-filter"></i> Filters
-                    </span>
                     <div id="resultsContainer" style="display: none;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h2>Results</h2>
-                            <a href="#" id="clearResults">Clear Results</a>
+                        <div style="display: flex; flex-direction: row; justify-content: space-between; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h2>Results</h2>
+                                <a href="#" id="clearResults">Clear Results</a>
+                            </div>
+                            <div style="display: inline-flex; gap: 6px; align-items: flex-end;">
+                                <span id="openSearchFilterModal" style="display:none; cursor:pointer; color:#be7a15; font-size:1.2em;">
+                                    <i class="fa-solid fa-filter"></i>
+                                </span>
+                            </div>
                         </div>
                         <div id="resultsList"></div>
                         <div id="pagination" style="display: none; margin-top: 20px; text-align: center;">
