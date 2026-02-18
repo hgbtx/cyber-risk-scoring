@@ -28,54 +28,32 @@ function parseCpeParts(cpeName) {
 function initDateSlider(results) {
     const dates = [...new Set(results.map(r => (r.cpeData?.created || '').slice(0, 10)).filter(Boolean))].sort();
     _dateSliderDates = dates;
-    const fromEl = document.getElementById('filterDateFrom');
-    const toEl = document.getElementById('filterDateTo');
+    const el = document.getElementById('dateSlider');
     const minLabel = document.getElementById('dateSliderMinLabel');
     const maxLabel = document.getElementById('dateSliderMaxLabel');
 
+    if (el.noUiSlider) el.noUiSlider.destroy();
+
     if (dates.length <= 1) {
-        fromEl.disabled = true; toEl.disabled = true;
-        fromEl.style.opacity = '0.4'; toEl.style.opacity = '0.4';
         minLabel.textContent = dates[0] || '—';
         maxLabel.textContent = dates[0] || '—';
-        fromEl.value = 0; toEl.value = 0; fromEl.max = 0; toEl.max = 0;
-        updateDateSliderTrack();
         return;
     }
 
-    fromEl.disabled = false; toEl.disabled = false;
-    fromEl.style.opacity = '1'; toEl.style.opacity = '1';
-    fromEl.min = 0; fromEl.max = dates.length - 1; fromEl.value = 0;
-    toEl.min = 0; toEl.max = dates.length - 1; toEl.value = dates.length - 1;
-    minLabel.textContent = dates[0];
-    maxLabel.textContent = dates[dates.length - 1];
-    updateDateSliderTrack();
-}
+    noUiSlider.create(el, {
+        start: [0, dates.length - 1],
+        connect: true,
+        step: 1,
+        range: { min: 0, max: dates.length - 1 }
+    });
 
-// UPDATE SLIDER TRACK
-function updateDateSliderTrack() {
-    const fromEl = document.getElementById('filterDateFrom');
-    const toEl = document.getElementById('filterDateTo');
-    const range = document.getElementById('dateSliderRange');
-    const max = parseInt(fromEl.max) || 1;
-    const lo = parseInt(fromEl.value); const hi = parseInt(toEl.value);
-    range.style.left = (lo / max * 100) + '%';
-    range.style.width = ((hi - lo) / max * 100) + '%';
-    document.getElementById('dateSliderMinLabel').textContent = _dateSliderDates[lo] || '—';
-    document.getElementById('dateSliderMaxLabel').textContent = _dateSliderDates[hi] || '—';
+    el.noUiSlider.on('update', function (values) {
+        const lo = Math.round(values[0]);
+        const hi = Math.round(values[1]);
+        minLabel.textContent = _dateSliderDates[lo] || '—';
+        maxLabel.textContent = _dateSliderDates[hi] || '—';
+    });
 }
-
-// PREVENTS THUMBS FROM CROSSING ON SLIDER
-document.getElementById('filterDateFrom').addEventListener('input', function () {
-    const toVal = parseInt(document.getElementById('filterDateTo').value);
-    if (parseInt(this.value) > toVal) this.value = toVal;
-    updateDateSliderTrack();
-});
-document.getElementById('filterDateTo').addEventListener('input', function () {
-    const fromVal = parseInt(document.getElementById('filterDateFrom').value);
-    if (parseInt(this.value) < fromVal) this.value = fromVal;
-    updateDateSliderTrack();
-});
 
 // =====================
 // OTHER FILTERS
@@ -85,8 +63,14 @@ document.getElementById('filterDateTo').addEventListener('input', function () {
 function getActiveFilters() {
     return {
         deprecated: document.getElementById('filterDeprecated').value,
-        dateFrom: _dateSliderDates[parseInt(document.getElementById('filterDateFrom').value)] || '',
-        dateTo: _dateSliderDates[parseInt(document.getElementById('filterDateTo').value)] || '',
+        dateFrom: (function () {
+            const el = document.getElementById('dateSlider');
+            return el.noUiSlider ? _dateSliderDates[Math.round(el.noUiSlider.get()[0])] || '' : '';
+        })(),
+        dateTo: (function () {
+            const el = document.getElementById('dateSlider');
+            return el.noUiSlider ? _dateSliderDates[Math.round(el.noUiSlider.get()[1])] || '' : '';
+        })(),
         vendor: document.getElementById('filterVendor').value.toLowerCase(),
         product: document.getElementById('filterProduct').value.toLowerCase(),
         version: document.getElementById('filterVersion').value.toLowerCase(),
@@ -162,14 +146,13 @@ function updateFilterFieldStates() {
         el.style.opacity = single ? '0.4' : '1';
     }
 
-    // Date fields: disable if all created dates are identical
     const uniqueDates = new Set(allResults.map(r => r.cpeData?.created || ''));
     const dateSingle = uniqueDates.size <= 1;
-    ['filterDateFrom', 'filterDateTo'].forEach(id => {
-        const el = document.getElementById(id);
-        el.disabled = dateSingle;
-        el.style.opacity = dateSingle ? '0.4' : '1';
-    });
+    const dateSliderEl = document.getElementById('dateSlider');
+    if (dateSliderEl.noUiSlider) {
+        dateSliderEl.style.opacity = dateSingle ? '0.4' : '1';
+        dateSliderEl.style.pointerEvents = dateSingle ? 'none' : 'auto';
+    }
 }
 
 // EVENT LISTENERS
@@ -178,9 +161,10 @@ document.getElementById('searchFilterModal').style.display = 'none';
 document.getElementById('clearFilters').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('filterDeprecated').value = '';
-    document.getElementById('filterDateFrom').value = 0;
-    document.getElementById('filterDateTo').value = document.getElementById('filterDateTo').max || 0;
-    updateDateSliderTrack();
+    const dateSliderEl = document.getElementById('dateSlider');
+    if (dateSliderEl.noUiSlider) {
+        dateSliderEl.noUiSlider.reset();
+    }
     document.getElementById('filterVendor').value = '';
     document.getElementById('filterProduct').value = '';
     document.getElementById('filterVersion').value = '';

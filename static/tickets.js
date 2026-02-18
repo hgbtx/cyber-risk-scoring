@@ -81,7 +81,7 @@ function renderTickets() {
                 <span style="padding: 2px 8px; background: ${
                     t.status === 'Resolved' ? '#e8f5e9' :
                     t.status === 'In Progress' ? '#e3f2fd' :
-                    t.status === 'Open' ? '#e67e22' : '#888'
+                    t.status === 'Open' ? '#e67e22' : '#e67e22'
                 }; color: ${
                     t.status === 'Resolved' ? '#2e7d32' :
                     t.status === 'In Progress' ? '#1565c0' :
