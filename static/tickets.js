@@ -85,6 +85,7 @@ function renderTickets(filteredList, includeArchived) {
     
         <!-- Buttons row -->
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            ${t.isArchived ? '<span style="font-size: 0.82em; color: #999; font-style: italic;">Archived</span>' : `
             ${t.isAccepted
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
@@ -106,8 +107,8 @@ function renderTickets(filteredList, includeArchived) {
             ${isOwner && !t.isAccepted
                 ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>`
                 : ''}
+        `}
         </div>
-    
         <!-- Comment input (below buttons) -->
         ${t.isAccepted && !t.isResolved && t.accepted_by === currentUser?.email
             ? `<div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
@@ -420,6 +421,7 @@ function clearFilters() {
     document.getElementById('filterDate').value = '';
     document.getElementById('filterOwner').value = '';
     document.getElementById('filterStatus').value = '';
+    document.getElementById('filterIncludeArchived').checked = false;
     renderTickets();
 }
 
