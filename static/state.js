@@ -25,6 +25,7 @@ let activeTicketFilter = null;
 let _publishedDateSliderDates = [];
 let cpeDetailSortKey = 'title';
 let cpeDetailSortDir = 'asc';
+let cveEnteredFromDetailView = false;
 
 // =====================
 // DOM REFERENCES

@@ -431,9 +431,11 @@ document.getElementById('cpeDetailBackToFolders').addEventListener('click', (e) 
 function openCveFolder(cpe, data) {
     const grid = document.getElementById('cveGrid');
     const folderView = document.getElementById('cveFolderView');
+    cveEnteredFromDetailView = document.getElementById('cpeDetailView').style.display !== 'none';
     grid.style.display = 'none';
     folderView.style.display = 'block';
     activeFolderCpe = cpe;
+    document.getElementById('cpeDetailView').style.display = 'none';
     document.getElementById('cpeInfoIcon').style.display = 'inline';
     document.getElementById('cveFolderTitle').textContent = data.title || cpe;
 
@@ -476,7 +478,9 @@ function openAllCveFolder() {
     grid.style.display = 'none';
     folderView.style.display = 'block';
     activeFolderCpe = null;
+    
     document.getElementById('cpeInfoIcon').style.display = 'none';
+    document.getElementById('cpeDetailView').style.display = 'none';
     document.getElementById('cveFolderTitle').textContent = 'All CVEs';
 
     folderView.dataset.cpe = '__all__';
@@ -618,8 +622,11 @@ function renderFolderTable(cpe, data) {
 // CVE GRID Back button
 document.getElementById('cveFolderBack').addEventListener('click', (e) => {
     e.preventDefault();
-    renderCveGrid();
-    // Restore header download buttons
+    if (cveEnteredFromDetailView) {
+        renderCpeDetailView();
+    } else {
+        renderCveGrid();
+    }
     if (totalCveCount > 0) {
     }
 });
