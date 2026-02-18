@@ -759,7 +759,7 @@ body {
 
 .noUi-handle::before,
 .noUi-handle::after {
-    display: none; /* removes the default notch lines */
+    display: none !important; /* removes the default notch lines */
 }
 
 /* ========================
