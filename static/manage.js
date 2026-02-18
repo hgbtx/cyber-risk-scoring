@@ -117,4 +117,5 @@ function refreshAfterManage() {
     renderCveGrid();
     renderEpssChart();
     renderCvssHistogram();
+    initPublishedDateSlider();
 }

@@ -60,6 +60,7 @@ function addSelectedItem(data) {
         renderCveList();
         renderEpssChart();
         renderCvssHistogram();
+        initPublishedDateSlider();
         saveAssets(); // Persist the updated assets after removal
         // Show placeholder again if no items left
         if (selectedItems.querySelectorAll('.selected-item').length === 0) {
@@ -86,6 +87,7 @@ function addSelectedItem(data) {
         renderCveList();
         renderEpssChart();
         renderCvssHistogram();
+        initPublishedDateSlider();
         saveAssets(); // Persist the updated assets with CVE data
     })
     .catch(error => console.error('Error fetching CVEs:', error));

@@ -21,6 +21,10 @@ function renderEpssChart() {
             const epss = vuln.epssScore;
             
             if (published && typeof epss === 'number' && epss > 0) {
+                const { from, to } = getPublishedDateRange();
+                const pubDate = new Date(published);
+                if (from && pubDate < from) continue;
+                if (to   && pubDate > to)   continue;
                 const normalizedPriority = normalizePriorityScore(vuln.priorityScore ?? 0);
                 dataPoints.push({
                     x: new Date(published),
@@ -137,6 +141,14 @@ function renderCvssHistogram() {
         const data = cveDataStore[cpe];
         if (!data?.vulnerabilities) continue;
         for (const vuln of data.vulnerabilities) {
+            
+            const published = vuln.cve?.published;
+            const { from, to } = getPublishedDateRange();
+            if (published) {
+                const pubDate = new Date(published);
+                if (from && pubDate < from) continue;
+                if (to   && pubDate > to)   continue;
+            }            
             const cvss31 = vuln.cve?.metrics?.cvssMetricV31?.[0]?.cvssData;
             const cvss2 = vuln.cve?.metrics?.cvssMetricV2?.[0]?.cvssData;
             const score = cvss31?.baseScore ?? cvss2?.baseScore ?? null;
@@ -228,6 +240,8 @@ document.getElementById('riskFormulaSelect').addEventListener('change', (e) => {
     chartRiskFormula = e.target.value;
     renderEpssChart();
     renderCvssHistogram();
+    initPublishedDateSlider();
+
 });
 
 // AGGREGATION METHOD SELECTOR
@@ -235,6 +249,7 @@ document.getElementById('aggMethodSelect').addEventListener('change', (e) => {
     chartAggMethod = e.target.value;
     renderEpssChart();
     renderCvssHistogram();
+    initPublishedDateSlider();
 });
 
 // RISK THRESHOLD SLIDER
@@ -243,4 +258,55 @@ document.getElementById('riskThresholdSlider').addEventListener('input', (e) => 
     document.getElementById('thresholdValue').textContent = chartRiskThreshold.toFixed(1);
     renderEpssChart();
     renderCvssHistogram();
+    initPublishedDateSlider();
 });
+
+// PUBLISHED DATE SLIDER
+function initPublishedDateSlider() {
+    const dates = [...new Set(
+        Object.values(cveDataStore)
+            .flatMap(d => d?.vulnerabilities || [])
+            .map(v => (v.cve?.published || '').slice(0, 10))
+            .filter(Boolean)
+    )].sort();
+
+    _publishedDateSliderDates = dates;
+
+    const el = document.getElementById('publishedDateSlider');
+    const minLabel = document.getElementById('publishedDateSliderMinLabel');
+    const maxLabel = document.getElementById('publishedDateSliderMaxLabel');
+
+    if (el.noUiSlider) el.noUiSlider.destroy();
+
+    if (dates.length <= 1) {
+        minLabel.textContent = dates[0] || '—';
+        maxLabel.textContent = dates[0] || '—';
+        return;
+    }
+
+    noUiSlider.create(el, {
+        start: [0, dates.length - 1],
+        connect: true,
+        step: 1,
+        range: { min: 0, max: dates.length - 1 }
+    });
+
+    el.noUiSlider.on('update', function (values) {
+        const lo = Math.round(values[0]);
+        const hi = Math.round(values[1]);
+        minLabel.textContent = _publishedDateSliderDates[lo] || '—';
+        maxLabel.textContent = _publishedDateSliderDates[hi] || '—';
+        renderEpssChart();
+        renderCvssHistogram();
+    });
+}
+
+function getPublishedDateRange() {
+    const el = document.getElementById('publishedDateSlider');
+    if (!el.noUiSlider || _publishedDateSliderDates.length === 0) return { from: null, to: null };
+    const [lo, hi] = el.noUiSlider.get().map(v => Math.round(v));
+    return {
+        from: new Date(_publishedDateSliderDates[lo]),
+        to:   new Date(_publishedDateSliderDates[hi] + 'T23:59:59')
+    };
+}

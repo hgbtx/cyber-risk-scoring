@@ -22,6 +22,7 @@ let archivedAssets = new Set(); // CPE names hidden from grid/charts
 let cvssHistogramInstance = null;
 let _dateSliderDates = []; // sorted unique date strings
 let activeTicketFilter = null;
+let _publishedDateSliderDates = [];
 
 // =====================
 // DOM REFERENCES
@@ -128,6 +129,7 @@ async function loadPersistedData() {
             renderCveList();
             renderEpssChart();
             renderCvssHistogram();
+            initPublishedDateSlider();
         }
     } catch (e) { console.error('Failed to load assets:', e); }
 }

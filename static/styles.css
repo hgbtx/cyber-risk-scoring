@@ -748,18 +748,23 @@ body {
 =========================== */
 
 .noUi-connect {
-    background: #d9d9d9 !important;
+    background: #be7a15 !important;
+}
+
+.noUi-horizontal {
+    height: 8px !important;
 }
 
 /* noUiSlider – round handles */
 .noUi-handle {
     background: #be7a15 !important;
+    border: none !important;
     border-radius: 50% !important;
-    width: 24px !important;
-    height: 24px !important;
-    top: -3.75px !important;
+    width: 16px !important;
+    height: 16px !important;
+    top: -5px !important;
     right: -9px !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    box-shadow: none !important;
 }
 
 .noUi-handle::before,
