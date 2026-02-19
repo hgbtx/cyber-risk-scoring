@@ -848,6 +848,54 @@ def ticket_comment():
         'comment_description': comment_desc
     })
 
+#---FIX COMMENT---
+@app.route('/db/ticket-comment-fix', methods=['POST'])
+@login_required
+def ticket_comment_fix():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    comment_id = data.get('comment_id')
+
+    if not ticket_id or not comment_id:
+        return jsonify({'error': 'ticket_id and comment_id are required'}), 400
+
+    conn = get_db()
+
+    # Verify ticket exists and this user is the ticket owner
+    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+    if ticket['user_id'] != uid:
+        conn.close()
+        return jsonify({'error': 'Only the ticket owner can mark comments as fixed'}), 403
+
+    comment = conn.execute('SELECT id FROM commentTickets WHERE id = ? AND ticket_id = ?', (comment_id, ticket_id)).fetchone()
+    if not comment:
+        conn.close()
+        return jsonify({'error': 'Comment not found'}), 404
+
+    fixed_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+
+    conn.execute(
+        'UPDATE commentTickets SET isFixed = 1, fixed = ? WHERE id = ?',
+        (fixed_ts, comment_id)
+    )
+
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'Comment marked as Fixed', fixed_ts)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'success': True, 'ticket_id': ticket_id, 'comment_id': comment_id,
+        'fixed': fixed_ts, 'fixed_by': email
+    })
+
 #---REOPEN TICKET---
 # @app.route('/db/ticket-reopen', methods=['POST'])
 # @login_required
@@ -932,8 +980,9 @@ def load_tickets():
 
     # Fetch all comments with commenter email
     comment_rows = conn.execute('''
-        SELECT commentTickets.ticket_id, commentTickets.commented,
-            commentTickets.comment_description, users.email AS comment_by
+        SELECT commentTickets.id AS comment_id, commentTickets.ticket_id, commentTickets.commented,
+            commentTickets.comment_description, commentTickets.isFixed, commentTickets.fixed,
+            users.email AS comment_by
         FROM commentTickets
         JOIN users ON commentTickets.user_id = users.id
         ORDER BY commentTickets.id ASC
@@ -946,9 +995,12 @@ def load_tickets():
         if tid not in comments_map:
             comments_map[tid] = []
         comments_map[tid].append({
+            'id': c['comment_id'],
             'comment_by': c['comment_by'],
             'commented': c['commented'],
-            'comment_description': c['comment_description']
+            'comment_description': c['comment_description'],
+            'isFixed': bool(c['isFixed']),
+            'fixed': c['fixed']
         })
 
     activity_rows = conn.execute('''

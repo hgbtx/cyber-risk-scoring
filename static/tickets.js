@@ -142,7 +142,11 @@ function renderTickets() {
                 ${t.comments.map(c => `
                     <div style="margin-bottom: 6px;">
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
+                        ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${escapeHtml(c.comment_description)}</p>
+                        ${isOwner && !c.isFixed
+                            ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
+                            : ''}
                     </div>
                 `).join('')}
             </div>`
@@ -271,6 +275,38 @@ function cancelComment(id) {
     const container = document.getElementById(`comment-input-${id}`);
     container.querySelector('textarea').value = '';
     container.style.display = 'none';
+}
+
+// FIX COMMENT
+function fixComment(ticketId, commentId) {
+    fetch('/db/ticket-comment-fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: ticketId, comment_id: commentId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === ticketId);
+            if (t && t.comments) {
+                const c = t.comments.find(c => c.id === commentId);
+                if (c) {
+                    c.isFixed = true;
+                    c.fixed = data.fixed;
+                }
+            }
+            if (!t.activity) t.activity = [];
+            t.activity.push({
+                action: 'Comment marked as Fixed',
+                action_by: currentUser?.email,
+                timestamp: data.fixed
+            });
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to fix comment');
+        }
+    })
+    .catch(e => console.error('Fix comment error:', e));
 }
 
 // REASSIGN TICKET

@@ -95,6 +95,8 @@ def init_db():
             user_id INTEGER NOT NULL,
             commented TEXT,
             comment_description TEXT,
+            isFixed INTEGER DEFAULT 0,
+            fixed TEXT,
             FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
             FOREIGN KEY (accepted_id) REFERENCES acceptedTickets(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -131,4 +133,16 @@ def init_db():
         
     ''')
     conn.commit()
+
+    # Migration: add isFixed/fixed columns if missing
+    try:
+        conn.execute('ALTER TABLE commentTickets ADD COLUMN isFixed INTEGER DEFAULT 0')
+    except:
+        pass
+    try:
+        conn.execute('ALTER TABLE commentTickets ADD COLUMN fixed TEXT')
+    except:
+        pass
+    conn.commit()
+
     conn.close()
