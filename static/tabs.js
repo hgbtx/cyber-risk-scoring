@@ -13,12 +13,28 @@ tabButtons.forEach(button => {
             goBackLink.click();
         }
 
+        // Collapse right panel and reset contents when switching tabs
+        const rightPanel = document.querySelector('.right-panel-container');
+        const toggleBtn = document.getElementById('toggleRightPanel');
+        if (!rightPanel.classList.contains('collapsed')) {
+            rightPanel.classList.add('collapsed');
+            toggleBtn.innerHTML = '&#9664;';
+        }
+        // Hide toggle button and panel since there's nothing to display
+        toggleBtn.style.display = 'none';
+        rightPanel.style.display = 'none';
+        // Reset right panel contents
+        const cveContainer = document.getElementById('cveContainer');
+        const expandedViewContainer = document.getElementById('expandedViewContainer');
+        if (cveContainer) cveContainer.style.display = 'none';
+        if (expandedViewContainer) expandedViewContainer.style.display = 'none';
+        if (typeof updateChartFullscreenBtn === 'function') updateChartFullscreenBtn();
+
         button.classList.add('active');
 
         document.getElementById('chartConfig').style.display = button.dataset.tab === 'charts' ? 'flex' : 'none';
         
         // Show/hide filter panel based on active tab
-        // Show/hide filter button based on active tab
         const filterBtn = document.getElementById('openSearchFilterModal');
         filterBtn.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'inline-block' : 'none';
         // Show/hide Assets drop zone and CVE counter based on active tab
