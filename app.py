@@ -1049,22 +1049,42 @@ def load_tickets():
 def ticket_stats():
     conn = get_db()
 
-    # Counts by status
-    by_status = conn.execute('''
-        SELECT COALESCE(s.status, 'Open') AS status, COUNT(*) AS count
-        FROM tickets t
-        LEFT JOIN statusTickets s ON s.ticket_id = t.id
+# Counts by status (derived from state tables, not just statusTickets)
+    archived_count = conn.execute('''
+        SELECT COUNT(*) AS c FROM archivedTickets WHERE isArchived = 1
+    ''').fetchone()['c']
+
+    resolved_count = conn.execute('''
+        SELECT COUNT(DISTINCT t.id) AS c FROM tickets t
+        LEFT JOIN resolvedTickets r ON r.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
-        WHERE COALESCE(a.isArchived, 0) = 0
-        GROUP BY COALESCE(s.status, 'Open')
-    ''').fetchall()
+        WHERE r.isResolved = 1 OR a.isArchived = 1
+    ''').fetchone()['c']
+
+    in_progress_count = conn.execute('''
+        SELECT COUNT(*) AS c FROM tickets t
+        JOIN statusTickets s ON s.ticket_id = t.id
+        LEFT JOIN resolvedTickets r ON r.ticket_id = t.id
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE s.status = 'In Progress'
+            AND COALESCE(r.isResolved, 0) = 0
+            AND COALESCE(a.isArchived, 0) = 0
+    ''').fetchone()['c']
+
+    total_count = conn.execute('SELECT COUNT(*) AS c FROM tickets').fetchone()['c']
+    open_count = total_count - resolved_count - in_progress_count
+
+    by_status = {
+        'Open': open_count,
+        'In Progress': in_progress_count,
+        'Resolved': resolved_count,
+        'Archived': archived_count
+    }
 
     # Counts by feature
     by_feature = conn.execute('''
         SELECT feature, COUNT(*) AS count
-        FROM tickets t
-        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
-        WHERE COALESCE(a.isArchived, 0) = 0
+        FROM tickets
         GROUP BY feature
         ORDER BY count DESC
     ''').fetchall()
@@ -1083,16 +1103,14 @@ def ticket_stats():
 
     # Resolution rate
     total = conn.execute('''
-        SELECT COUNT(*) AS c FROM tickets t
-        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
-        WHERE COALESCE(a.isArchived, 0) = 0
+        SELECT COUNT(*) AS c FROM tickets
     ''').fetchone()['c']
 
     resolved = conn.execute('''
-        SELECT COUNT(*) AS c FROM tickets t
-        JOIN resolvedTickets r ON r.ticket_id = t.id
+        SELECT COUNT(DISTINCT t.id) AS c FROM tickets t
+        LEFT JOIN resolvedTickets r ON r.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
-        WHERE r.isResolved = 1 AND COALESCE(a.isArchived, 0) = 0
+        WHERE r.isResolved = 1 OR a.isArchived = 1
     ''').fetchone()['c']
 
     # Aging: open tickets with days since creation
@@ -1102,13 +1120,13 @@ def ticket_stats():
         LEFT JOIN statusTickets s ON s.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
         WHERE COALESCE(s.status, 'Open') IN ('Open', 'In Progress')
-          AND COALESCE(a.isArchived, 0) = 0
+            AND COALESCE(a.isArchived, 0) = 0
     ''').fetchall()
 
     conn.close()
 
     return jsonify({
-        'by_status': {r['status']: r['count'] for r in by_status},
+        'by_status': by_status,
         'by_feature': {r['feature']: r['count'] for r in by_feature},
         'by_person': {r['email']: r['count'] for r in by_person},
         'resolution': {'resolved': resolved, 'total': total},

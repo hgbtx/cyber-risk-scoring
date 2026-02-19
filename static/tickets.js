@@ -101,7 +101,7 @@ function renderTickets() {
     
         <!-- Buttons row -->
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            ${t.isArchived ? '<span style="font-size: 0.82em; color: #999; font-style: italic;">Archived</span>' : `
+        ${t.isArchived ? `<button onclick="restoreTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Restore</button>` : `
             ${t.isAccepted
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
@@ -167,6 +167,7 @@ function renderTickets() {
     `;
         container.appendChild(div);
     }
+    loadTicketStats();
 }
 
 // UPDATE TICKET STATUS
@@ -435,6 +436,36 @@ function archiveTicket(id) {
         }
     })
     .catch(e => console.error('Archive ticket error:', e));
+}
+
+// RESTORE TICKET
+function restoreTicket(id) {
+    fetch('/db/ticket-archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id, isArchived: 0 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.isArchived = false;
+                t.archived = null;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'Restored',
+                    action_by: currentUser?.email,
+                    timestamp: new Date().toLocaleString()
+                });
+            }
+            statusTicket(id, 'Resolved');
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to restore ticket');
+        }
+    })
+    .catch(e => console.error('Restore ticket error:', e));
 }
 
 // DELETE TICKETS
