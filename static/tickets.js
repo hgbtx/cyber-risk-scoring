@@ -62,6 +62,22 @@ function renderTickets() {
 
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
+
+    // Show active filter bar
+    if (activeTicketFilter) {
+        const { feature, owner, status } = activeTicketFilter;
+        const parts = [];
+        if (feature) parts.push(`Feature: ${feature}`);
+        if (owner) parts.push(`Owner: ${owner}`);
+        if (status) parts.push(`Status: ${status}`);
+        if (parts.length) {
+            const bar = document.createElement('div');
+            bar.style.cssText = 'max-width: 600px; margin-bottom: 10px; padding: 6px 12px; background: #fff3e0; border-radius: 4px; font-size: 0.85em; color: #57534E; display: flex; justify-content: space-between; align-items: center;';
+            bar.innerHTML = `<span>Filtered by: ${parts.join(' · ')}</span><span onclick="clearFilters()" style="cursor:pointer; color:#be7a15; font-weight:600;">✕ Clear</span>`;
+            container.appendChild(bar);
+        }
+    }
+
     if (!visibleTickets.length) return;
 
     const uid = currentUser?.id;
@@ -86,14 +102,14 @@ function renderTickets() {
                     t.status === 'Resolved' ? '#2e7d32' :
                     t.status === 'In Progress' ? '#1565c0' :
                     t.status === 'Open' ? '#fff3e0' : '#f5f5f5'
-                }; border-radius: 3px; font-size: 0.9em; font-weight: 600;">${escapeHtml(t.status || 'Open')}</span>
+                }; border-radius: 3px; font-size: 0.9em; font-weight: 600; cursor: pointer;" onclick="filterByField('status', '${escapeHtml(t.status || 'Open')}')" title="Filter by status">${escapeHtml(t.status || 'Open')}</span>
             </div>
         </div>
     
         <!-- Feature tag + creator -->
         <div style="margin-top: 4px; display: flex; gap: 6px; align-items: center;">
-            <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600;">${escapeHtml(t.feature)}</span>
-            <span style="font-size: 0.78em; color: #888;">by ${escapeHtml(t.creator_email || 'unknown')}</span>
+            <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600; cursor: pointer;" onclick="filterByField('feature', '${escapeHtml(t.feature)}')" title="Filter by feature">${escapeHtml(t.feature)}</span>
+            <span style="font-size: 0.78em; color: #888; cursor: pointer;" onclick="filterByField('owner', '${escapeHtml(t.creator_email || 'unknown')}')" title="Filter by owner">by ${escapeHtml(t.creator_email || 'unknown')}</span>
         </div>
     
         <!-- Description -->
@@ -477,6 +493,26 @@ function deleteTicket(id) {
 
 // Load persisted tickets on startup
 renderTickets();
+
+// CLICK-TO-FILTER (inline from ticket cards)
+function filterByField(field, value) {
+    if (!activeTicketFilter) {
+        activeTicketFilter = { feature: '', date: '', owner: '', status: '', includeArchived: false };
+    }
+    // Toggle: if already filtering by this exact value, clear it
+    if (activeTicketFilter[field] === value) {
+        activeTicketFilter[field] = '';
+        // If all filters are empty, clear entirely
+        const { feature, date, owner, status } = activeTicketFilter;
+        if (!feature && !date && !owner && !status) activeTicketFilter = null;
+    } else {
+        activeTicketFilter[field] = value;
+        if (field === 'status' && value === 'Archived') {
+            activeTicketFilter.includeArchived = true;
+        }
+    }
+    renderTickets();
+}
 
 // =====================
 // FILTER TICKETS
