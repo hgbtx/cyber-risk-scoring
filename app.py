@@ -991,6 +991,78 @@ def load_tickets():
         'status': r['st_status'] or 'Open'
     } for r in rows])
 
+#---TICKET STATS---
+@app.route('/db/ticket-stats', methods=['GET'])
+@login_required
+def ticket_stats():
+    conn = get_db()
+
+    # Counts by status
+    by_status = conn.execute('''
+        SELECT COALESCE(s.status, 'Open') AS status, COUNT(*) AS count
+        FROM tickets t
+        LEFT JOIN statusTickets s ON s.ticket_id = t.id
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE COALESCE(a.isArchived, 0) = 0
+        GROUP BY COALESCE(s.status, 'Open')
+    ''').fetchall()
+
+    # Counts by feature
+    by_feature = conn.execute('''
+        SELECT feature, COUNT(*) AS count
+        FROM tickets t
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE COALESCE(a.isArchived, 0) = 0
+        GROUP BY feature
+        ORDER BY count DESC
+    ''').fetchall()
+
+    # Per-person workload (accepted tickets, not archived)
+    by_person = conn.execute('''
+        SELECT u.email, COUNT(*) AS count
+        FROM acceptedTickets at2
+        JOIN users u ON at2.user_id = u.id
+        JOIN tickets t ON at2.ticket_id = t.id
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE at2.isAccepted = 1 AND COALESCE(a.isArchived, 0) = 0
+        GROUP BY u.email
+        ORDER BY count DESC
+    ''').fetchall()
+
+    # Resolution rate
+    total = conn.execute('''
+        SELECT COUNT(*) AS c FROM tickets t
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE COALESCE(a.isArchived, 0) = 0
+    ''').fetchone()['c']
+
+    resolved = conn.execute('''
+        SELECT COUNT(*) AS c FROM tickets t
+        JOIN resolvedTickets r ON r.ticket_id = t.id
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE r.isResolved = 1 AND COALESCE(a.isArchived, 0) = 0
+    ''').fetchone()['c']
+
+    # Aging: open tickets with days since creation
+    aging = conn.execute('''
+        SELECT t.id, t.created, COALESCE(s.status, 'Open') AS status
+        FROM tickets t
+        LEFT JOIN statusTickets s ON s.ticket_id = t.id
+        LEFT JOIN archivedTickets a ON a.ticket_id = t.id
+        WHERE COALESCE(s.status, 'Open') IN ('Open', 'In Progress')
+          AND COALESCE(a.isArchived, 0) = 0
+    ''').fetchall()
+
+    conn.close()
+
+    return jsonify({
+        'by_status': {r['status']: r['count'] for r in by_status},
+        'by_feature': {r['feature']: r['count'] for r in by_feature},
+        'by_person': {r['email']: r['count'] for r in by_person},
+        'resolution': {'resolved': resolved, 'total': total},
+        'aging': [{'id': r['id'], 'created': r['created'], 'status': r['status']} for r in aging]
+    })
+
 #===========
 # MAIN
 #===========

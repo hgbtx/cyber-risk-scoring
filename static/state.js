@@ -104,6 +104,8 @@ async function loadPersistedData() {
             cveDataStore[a.cpeName] = a.cveData;
         }
 
+        loadTicketStats();
+
         // Hydrate cpeDataStore from cpe_cache
         const cpeNames = Object.keys(cveDataStore);
         if (cpeNames.length) {

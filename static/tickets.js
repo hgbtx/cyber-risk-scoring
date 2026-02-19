@@ -469,3 +469,95 @@ function applyFilters() {
 document.getElementById('filterModal').addEventListener('click', function(e) {
     if (e.target === this) closeFilterModal();
 });
+
+// =====================
+// TICKET DASHBOARD
+// =====================
+
+async function loadTicketStats() {
+    try {
+        const res = await fetch('/db/ticket-stats');
+        const stats = await res.json();
+        renderTicketDashboard(stats);
+    } catch (e) {
+        console.error('Failed to load ticket stats:', e);
+    }
+}
+
+function renderTicketDashboard(stats) {
+    const dashboard = document.getElementById('ticketDashboard');
+    dashboard.style.display = 'block';
+
+    // --- 1. Status badges ---
+    const statusColors = {
+        'Open':        { bg: '#fff3e0', fg: '#e67e22', icon: '🟡' },
+        'In Progress': { bg: '#e3f2fd', fg: '#1565c0', icon: '🔵' },
+        'Resolved':    { bg: '#e8f5e9', fg: '#2e7d32', icon: '🟢' },
+        'Archived':    { bg: '#f5f5f5', fg: '#78909c', icon: '⚪' }
+    };
+    const statusRow = document.getElementById('dashStatusRow');
+    statusRow.innerHTML = '';
+    for (const [status, color] of Object.entries(statusColors)) {
+        const count = stats.by_status[status] || 0;
+        statusRow.innerHTML += `
+            <span style="padding: 4px 12px; background: ${color.bg}; color: ${color.fg};
+                border-radius: 4px; font-weight: 600; font-size: 0.9em;">
+                ${color.icon} ${count} ${status}
+            </span>`;
+    }
+
+    // --- 2. Feature breakdown (horizontal mini-bars) ---
+    const featureRow = document.getElementById('dashFeatureRow');
+    const featureEntries = Object.entries(stats.by_feature);
+    const maxFeatureCount = Math.max(...featureEntries.map(([, c]) => c), 1);
+    featureRow.innerHTML = '<div style="font-weight:600; font-size:0.85em; color:#57534E; margin-bottom:6px;">By Feature</div>';
+    for (const [feature, count] of featureEntries) {
+        const pct = Math.round((count / maxFeatureCount) * 100);
+        featureRow.innerHTML += `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px;">
+                <span style="width:110px; font-size:0.82em; color:#57534E; text-align:right;">${feature}</span>
+                <div style="flex:1; background:#eee; border-radius:3px; height:14px; overflow:hidden;">
+                    <div style="width:${pct}%; background:#d5bf9f; height:100%; border-radius:3px;"></div>
+                </div>
+                <span style="font-size:0.82em; color:#888; width:24px;">${count}</span>
+            </div>`;
+    }
+
+    // --- 3. Workload, Resolution, Aging ---
+    const detailsRow = document.getElementById('dashDetailsRow');
+    let html = '';
+
+    // Resolution rate
+    const { resolved, total } = stats.resolution;
+    const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    html += `<div style="margin-bottom:8px;"><strong>Resolution Rate:</strong> ${resolved}/${total} (${rate}%)</div>`;
+
+    // Workload
+    const personEntries = Object.entries(stats.by_person);
+    if (personEntries.length) {
+        html += '<div style="margin-bottom:8px;"><strong>Workload:</strong> ';
+        html += personEntries.map(([email, count]) => `${email} (${count})`).join(', ');
+        html += '</div>';
+    }
+
+    // Aging
+    if (stats.aging.length) {
+        const now = new Date();
+        const agingLines = stats.aging.map(t => {
+            const created = new Date(t.created);
+            const days = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+            return { id: t.id, status: t.status, days };
+        }).sort((a, b) => b.days - a.days);
+
+        const avgDays = Math.round(agingLines.reduce((s, t) => s + t.days, 0) / agingLines.length);
+        html += `<div style="margin-bottom:4px;"><strong>Aging:</strong> ${agingLines.length} open/in-progress tickets, avg ${avgDays} days old</div>`;
+
+        // Show top 3 oldest
+        const oldest = agingLines.slice(0, 3);
+        html += '<div style="margin-left:12px; font-size:0.82em; color:#888;">';
+        html += oldest.map(t => `#${t.id} — ${t.days}d (${t.status})`).join(' &middot; ');
+        html += '</div>';
+    }
+
+    detailsRow.innerHTML = html;
+}
