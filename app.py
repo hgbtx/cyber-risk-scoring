@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__)
 
-import time, requests, os, json
+import time, requests, os, json, re
 from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
@@ -26,6 +26,22 @@ progress_every = 25
 kev_cache = set()
 kev_cache_time = 0
 KEV_CACHE_TTL = 86400  # refresh daily
+
+#=====================
+# HELPERS
+#=====================
+
+#---PARSE MENTIONS (myTickets)
+def parse_mentions(text):
+    """Extract @username mentions from comment text."""
+    return re.findall(r'@(\w+)', text)
+
+#---PARSE DATE HELPER---
+def parse_date(date_str):
+    try:
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+    except:
+        return datetime(2000, 1, 1)
 
 #=====================
 # AUTHENTICATION
@@ -109,13 +125,6 @@ def auth_me():
 @app.route('/')
 def home():
     return render_template('index.html') 
-
-#---PARSE DATE HELPER---
-def parse_date(date_str):
-    try:
-        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-    except:
-        return datetime(2000, 1, 1)
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
@@ -824,28 +833,59 @@ def ticket_comment():
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
 
-    # Only the current acceptor can comment
+    # Acceptor OR collaborator can comment
     accepted = conn.execute(
         'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
     ).fetchone()
-    if not accepted or accepted['user_id'] != uid:
+
+    is_acceptor = accepted and accepted['user_id'] == uid
+    is_collaborator = conn.execute(
+        'SELECT id FROM ticketCollaborators WHERE ticket_id = ? AND user_id = ?', (ticket_id, uid)
+    ).fetchone() is not None
+
+    if not is_acceptor and not is_collaborator:
         conn.close()
-        return jsonify({'error': 'Only the accepting user can comment on this ticket'}), 403
+        return jsonify({'error': 'Only the accepting user or a collaborator can comment on this ticket'}), 403
 
     commented_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
     email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
 
+    accepted_id = accepted['id'] if accepted else None
     conn.execute(
         'INSERT INTO commentTickets (ticket_id, accepted_id, user_id, commented, comment_description) VALUES (?, ?, ?, ?, ?)',
-        (ticket_id, accepted['id'], uid, commented_ts, comment_desc)
+        (ticket_id, accepted_id, uid, commented_ts, comment_desc)
     )
+
+    # Parse @mentions and add collaborators
+    mentions = parse_mentions(comment_desc)
+    new_collaborators = []
+    for username in mentions:
+        mentioned_user = conn.execute(
+            'SELECT id, email FROM users WHERE email = ?', (username,)
+        ).fetchone()
+        if mentioned_user and mentioned_user['id'] != uid:
+            existing = conn.execute(
+                'SELECT id FROM ticketCollaborators WHERE ticket_id = ? AND user_id = ?',
+                (ticket_id, mentioned_user['id'])
+            ).fetchone()
+            if not existing:
+                conn.execute(
+                    'INSERT INTO ticketCollaborators (ticket_id, user_id, added_by, added) VALUES (?, ?, ?, ?)',
+                    (ticket_id, mentioned_user['id'], uid, commented_ts)
+                )
+                conn.execute(
+                    'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+                    (ticket_id, uid, f'Collaborator added: {mentioned_user["email"]}', commented_ts)
+                )
+                new_collaborators.append(mentioned_user['email'])
 
     conn.commit()
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
         'commented': commented_ts, 'comment_by': email,
-        'comment_description': comment_desc
+        'comment_description': comment_desc,
+        'new_collaborators': new_collaborators
     })
 
 #---FIX COMMENT---
@@ -862,14 +902,20 @@ def ticket_comment_fix():
 
     conn = get_db()
 
-    # Verify ticket exists and this user is the ticket owner
+# Verify ticket exists and this user is the ticket owner OR a collaborator
     ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
-    if ticket['user_id'] != uid:
+
+    is_owner = ticket['user_id'] == uid
+    is_collaborator = conn.execute(
+        'SELECT id FROM ticketCollaborators WHERE ticket_id = ? AND user_id = ?', (ticket_id, uid)
+    ).fetchone() is not None
+
+    if not is_owner and not is_collaborator:
         conn.close()
-        return jsonify({'error': 'Only the ticket owner can mark comments as fixed'}), 403
+        return jsonify({'error': 'Only the ticket owner or a collaborator can mark comments as fixed'}), 403
 
     comment = conn.execute('SELECT id FROM commentTickets WHERE id = ? AND ticket_id = ?', (comment_id, ticket_id)).fetchone()
     if not comment:
@@ -1022,6 +1068,20 @@ def load_tickets():
             'timestamp': a['timestamp']
         })
 
+        # Fetch collaborators per ticket
+        collab_rows = conn.execute('''
+            SELECT ticketCollaborators.ticket_id, users.email AS collaborator_email
+            FROM ticketCollaborators
+            JOIN users ON ticketCollaborators.user_id = users.id
+        ''').fetchall()
+
+        collab_map = {}
+        for c in collab_rows:
+            tid = c['ticket_id']
+            if tid not in collab_map:
+                collab_map[tid] = []
+            collab_map[tid].append(c['collaborator_email'])
+
     conn.close()
     return jsonify([{
         'id': r['id'],
@@ -1040,7 +1100,8 @@ def load_tickets():
         'archived': r['at_archived'] if r['at_isArchived'] else None,
         'comments': comments_map.get(r['id'], []),
         'activity': activity_map.get(r['id'], []),
-        'status': r['st_status'] or 'Open'
+        'status': r['st_status'] or 'Open',
+        'collaborators': collab_map.get(r['id'], [])
     } for r in rows])
 
 #---TICKET STATS---

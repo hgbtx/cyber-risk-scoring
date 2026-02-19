@@ -84,6 +84,7 @@ function renderTickets() {
 
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
+        const isCollaborator = (t.collaborators || []).includes(currentUser?.email);
         const div = document.createElement('div');
         div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
         div.innerHTML = `
@@ -130,11 +131,13 @@ function renderTickets() {
                     <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
                     : ''
                 }`
-                : (t.isAccepted && t.accepted_by === currentUser?.email
+                : (t.isAccepted && (t.accepted_by === currentUser?.email || isCollaborator)
+                ? `${t.accepted_by === currentUser?.email
                     ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
-                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>
-                    <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
-                    : '')
+                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>`
+                    : ''}
+                <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
+                : '')
             }
             ${isOwner && !t.isAccepted
                 ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>`
@@ -142,7 +145,7 @@ function renderTickets() {
         `}
         </div>
         <!-- Comment input (below buttons) -->
-        ${t.isAccepted && !t.isResolved && t.accepted_by === currentUser?.email
+        ${t.isAccepted && !t.isResolved && (t.accepted_by === currentUser?.email || isCollaborator)
             ? `<div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
                 <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
                 <div style="display: flex; gap: 6px;">
@@ -160,7 +163,7 @@ function renderTickets() {
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${escapeHtml(c.comment_description)}</p>
-                        ${isOwner && !c.isFixed
+                        ${(isOwner || isCollaborator) && !c.isFixed
                             ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
                             : ''}
                     </div>
@@ -278,6 +281,12 @@ function submitComment(id) {
                     commented: data.commented,
                     comment_description: data.comment_description
                 });
+                if (data.new_collaborators && data.new_collaborators.length) {
+                    if (!t.collaborators) t.collaborators = [];
+                    data.new_collaborators.forEach(c => {
+                        if (!t.collaborators.includes(c)) t.collaborators.push(c);
+                    });
+                }
             }
             renderTickets();
         } else {

@@ -131,6 +131,18 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
         
+        CREATE TABLE IF NOT EXISTS ticketCollaborators (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            added_by INTEGER NOT NULL,
+            added TEXT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(ticket_id, user_id)
+        );
+
     ''')
     conn.commit()
 
