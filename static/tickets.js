@@ -39,6 +39,11 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
     renderTickets();
 });
 
+// USER MENTIONS IN TICKET COMMENTS
+function formatMentions(text) {
+    return escapeHtml(text).replace(/@(\w+)/g, '<span style="color: #e67e22; font-weight: 600;">@$1</span>');
+}
+
 // RENDER TICKETS
 function renderTickets() {
     let visibleTickets;
@@ -162,7 +167,7 @@ function renderTickets() {
                     <div style="margin-bottom: 6px;">
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
-                        <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${escapeHtml(c.comment_description)}</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${formatMentions(c.comment_description)}</p>
                         ${(isOwner || isCollaborator) && !c.isFixed
                             ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
                             : ''}
