@@ -65,6 +65,14 @@ function renderTickets() {
         visibleTickets = tickets.filter(t => !t.isArchived);
     }
 
+    // Sort tickets
+    const sortMode = document.getElementById('ticketSortSelect')?.value || 'default';
+    if (sortMode === 'newest') {
+        visibleTickets.sort((a, b) => new Date(b.created) - new Date(a.created));
+    } else if (sortMode === 'oldest') {
+        visibleTickets.sort((a, b) => new Date(a.created) - new Date(b.created));
+    }
+
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
 
