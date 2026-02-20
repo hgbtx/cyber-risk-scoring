@@ -12,10 +12,15 @@ def init_db():
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT,
+            otp_hash TEXT,
+            otp_expires_at TEXT,
+            must_change_password INTEGER DEFAULT 1,
             role TEXT NOT NULL DEFAULT 'viewer',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id)
         );
 
         CREATE TABLE IF NOT EXISTS assets (
@@ -143,9 +148,15 @@ def init_db():
             UNIQUE(ticket_id, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS roles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role_name TEXT UNIQUE NOT NULL,
+            name TEXT UNIQUE NOT NULL,
             level INTEGER NOT NULL
         );
 
@@ -154,16 +165,11 @@ def init_db():
             org_id INTEGER NOT NULL,
             asset_sharing_mode TEXT NOT NULL DEFAULT 'private',
             sod_enforcement TEXT NOT NULL DEFAULT 'hard',
+            otp_expiry_hours INTEGER NOT NULL DEFAULT 72,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_by INTEGER,
             FOREIGN KEY (org_id) REFERENCES organizations(id),
             FOREIGN KEY (updated_by) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS organizations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS sod_overrides (
@@ -197,19 +203,19 @@ def init_db():
     if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
         conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
 
+    # Seed roles if empty
+    if conn.execute('SELECT COUNT(*) FROM roles').fetchone()[0] == 0:
+        conn.executemany(
+            'INSERT INTO roles (name, level) VALUES (?, ?)',
+            [('viewer', 1), ('analyst', 2), ('manager', 3), ('admin', 4)]
+        )
+
     # Seed default org policy if empty
     if conn.execute('SELECT COUNT(*) FROM org_policies').fetchone()[0] == 0:
         org_id = conn.execute('SELECT id FROM organizations LIMIT 1').fetchone()[0]
         conn.execute(
             'INSERT INTO org_policies (org_id, asset_sharing_mode, sod_enforcement) VALUES (?, ?, ?)',
             (org_id, 'private', 'hard')
-        )
-
-    # Seed roles if empty
-    if conn.execute('SELECT COUNT(*) FROM roles').fetchone()[0] == 0:
-        conn.executemany(
-            'INSERT INTO roles (name, level) VALUES (?, ?)',
-            [('viewer', 1), ('analyst', 2), ('manager', 3), ('admin', 4)]
         )
     conn.commit()
 
