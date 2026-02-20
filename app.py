@@ -144,7 +144,7 @@ def home():
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
-@require_role()
+@require_role('viewer')
 def get_kev_list():
     global kev_cache, kev_cache_time
     if time.time() - kev_cache_time > KEV_CACHE_TTL or not kev_cache:
@@ -158,7 +158,7 @@ def get_kev_list():
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
-@require_role()
+@require_role('viewer')
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
@@ -463,7 +463,7 @@ def count_high_risk(series, threshold=7.0):
 
 #---LOAD CPE CACHE---
 @app.route('/db/load-cpe-cache', methods=['POST'])
-@require_role()
+@require_role('viewer')
 def load_cpe_cache():
     cpe_names = request.json.get('cpeNames', [])
     if not cpe_names:
@@ -558,7 +558,7 @@ def archive_asset():
 
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
-@require_role()
+@require_role('viewer')
 def load_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -573,7 +573,7 @@ def load_assets():
 
 #---LOAD ARCHIVED ASSETS---
 @app.route('/db/load-archived-assets', methods=['GET'])
-@require_role()
+@require_role('viewer')
 def load_archived_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -1014,7 +1014,7 @@ def ticket_archive():
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
-@require_role()
+@require_role('viewer')
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
@@ -1118,7 +1118,7 @@ def load_tickets():
 
 #---TICKET STATS---
 @app.route('/db/ticket-stats', methods=['GET'])
-@require_role()
+@require_role('viewer')
 def ticket_stats():
     conn = get_db()
 
