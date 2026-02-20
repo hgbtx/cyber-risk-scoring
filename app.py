@@ -11,6 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
+from auth_helpers import require_role, check_ownership, check_sod, log_sod_override
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -47,15 +48,6 @@ def parse_date(date_str):
 # AUTHENTICATION
 #=====================
 
-#---AUTHENTICATION HELPERS---
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'error': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    return decorated
-
 def get_current_user_id():
     return session.get('user_id')
 
@@ -89,7 +81,6 @@ def verify_otp():
     return jsonify({'success': True, 'must_change_password': bool(user['must_change_password'])})
 
 @app.route('/auth/set-password', methods=['POST'])
-@login_required
 def set_password():
     data = request.json or {}
     password = data.get('password', '')
@@ -153,7 +144,7 @@ def home():
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
-@login_required
+@require_role()
 def get_kev_list():
     global kev_cache, kev_cache_time
     if time.time() - kev_cache_time > KEV_CACHE_TTL or not kev_cache:
@@ -167,7 +158,7 @@ def get_kev_list():
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
-@login_required
+@require_role()
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
@@ -257,7 +248,6 @@ def fetch_cves_for_cpe(cpe_uri: str) -> list[dict]:
 
 #---NVD CVE FETCH---
 @app.route('/api/fetch-cves', methods=['POST'])
-@login_required
 def api_fetch_cves():
     data = request.json
     cpe_uri = data.get('cpeUri')
@@ -307,7 +297,6 @@ def fetch_kev_ids() -> set:
 
 #---EPSS SCORE FETCH---
 @app.route('/api/fetch-epss', methods=['POST'])
-@login_required
 def fetch_epss_scores(cve_ids: list[str]) -> dict[str, float]:
     """
     Fetch EPSS scores for a list of CVE IDs.
@@ -474,7 +463,7 @@ def count_high_risk(series, threshold=7.0):
 
 #---LOAD CPE CACHE---
 @app.route('/db/load-cpe-cache', methods=['POST'])
-@login_required
+@require_role()
 def load_cpe_cache():
     cpe_names = request.json.get('cpeNames', [])
     if not cpe_names:
@@ -502,7 +491,6 @@ def load_cpe_cache():
 
 #---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
-@login_required
 def save_assets():
     uid = get_current_user_id()
     assets = request.json.get('assets', [])
@@ -533,7 +521,6 @@ def save_assets():
 
 #---ARCHIVE ASSETS---
 @app.route('/db/archived-assets', methods=['POST'])
-@login_required
 def archive_asset():
     uid = get_current_user_id()
     data = request.json or {}
@@ -571,7 +558,7 @@ def archive_asset():
 
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
-@login_required
+@require_role()
 def load_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -586,7 +573,7 @@ def load_assets():
 
 #---LOAD ARCHIVED ASSETS---
 @app.route('/db/load-archived-assets', methods=['GET'])
-@login_required
+@require_role()
 def load_archived_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -603,9 +590,9 @@ def load_archived_assets():
 # TICKET DB ENDPOINTS
 #=====================
 
-#---SAVE TICKETS---
+#---CREATE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
-@login_required
+@require_role('analyst')
 def save_tickets():
     uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
@@ -641,7 +628,7 @@ def save_tickets():
 
 #---TICKET STATUS---
 @app.route('/db/ticket-status', methods=['POST'])
-@login_required
+@require_role('analyst')
 def ticket_status():
     uid = get_current_user_id()
     data = request.json or {}
@@ -682,13 +669,13 @@ def ticket_status():
 
 #---DELETE TICKET---
 # @app.route('/db/ticket-delete', methods=['POST'])
-# @login_required
+# @require_role('manager')
 def ticket_delete():
     pass
 
 #---ACCEPT TICKET---
 @app.route('/db/ticket-acceptance', methods=['POST'])
-@login_required
+@require_role('analyst')
 def ticket_acceptance():
     uid = get_current_user_id()
     data = request.json or {}
@@ -728,7 +715,7 @@ def ticket_acceptance():
 
 #---RESOLVE TICKET---
 @app.route('/db/ticket-resolution', methods=['POST'])
-@login_required
+@require_role('manager')
 def ticket_resolution():
     uid = get_current_user_id()
     data = request.json or {}
@@ -782,7 +769,7 @@ def ticket_resolution():
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
-@login_required
+@require_role('manager')
 def ticket_reassign():
     uid = get_current_user_id()
     data = request.json or {}
@@ -840,7 +827,7 @@ def ticket_reassign():
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
-@login_required
+@require_role('analyst')
 def ticket_comment():
     uid = get_current_user_id()
     data = request.json or {}
@@ -915,7 +902,7 @@ def ticket_comment():
 
 #---FIX COMMENT---
 @app.route('/db/ticket-comment-fix', methods=['POST'])
-@login_required
+@require_role('analyst')
 def ticket_comment_fix():
     uid = get_current_user_id()
     data = request.json or {}
@@ -969,13 +956,13 @@ def ticket_comment_fix():
 
 #---REOPEN TICKET---
 # @app.route('/db/ticket-reopen', methods=['POST'])
-# @login_required
+# @require_role('manager')
 def ticket_reopen():
     pass
 
 #---ARCHIVE TICKET---
 @app.route('/db/ticket-archive', methods=['POST'])
-@login_required
+@require_role('manager')
 def ticket_archive():
     uid = get_current_user_id()
     data = request.json or {}
@@ -1027,7 +1014,7 @@ def ticket_archive():
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
-@login_required
+@require_role()
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
@@ -1131,7 +1118,7 @@ def load_tickets():
 
 #---TICKET STATS---
 @app.route('/db/ticket-stats', methods=['GET'])
-@login_required
+@require_role()
 def ticket_stats():
     conn = get_db()
 
@@ -1218,6 +1205,148 @@ def ticket_stats():
         'resolution': {'resolved': resolved, 'total': total},
         'aging': [{'id': r['id'], 'created': r['created'], 'status': r['status']} for r in aging]
     })
+
+#=====================
+# ADMIN ENDPOINTS
+#=====================
+
+@app.route('/admin/users', methods=['GET'])
+@require_role('admin')
+def admin_list_users():
+    conn = get_db()
+    users = conn.execute('SELECT id, username, role, must_change_password, created_at FROM users').fetchall()
+    conn.close()
+    return jsonify([dict(u) for u in users])
+
+@app.route('/admin/users/create', methods=['POST'])
+@require_role('admin')
+def admin_create_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    role = data.get('role', 'viewer')
+    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
+    if not username:
+        return jsonify({'error': 'Username is required.'}), 400
+    if role not in valid_roles:
+        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
+
+    conn = get_db()
+    if conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
+        conn.close()
+        return jsonify({'error': 'Username already exists.'}), 409
+
+    otp = generate_otp()
+    otp_hash = generate_password_hash(otp)
+    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
+    expiry_hours = policy['otp_expiry_hours'] if policy else 72
+    from datetime import timedelta
+    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
+
+    conn.execute(
+        'INSERT INTO users (username, otp_hash, otp_expires_at, role, must_change_password) VALUES (?, ?, ?, ?, ?)',
+        (username, otp_hash, expires_at, role, 1)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'role': role, 'otp': otp, 'expires_at': expires_at}), 201
+
+@app.route('/admin/users/update-role', methods=['POST'])
+@require_role('admin')
+def admin_update_role():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    role = data.get('role', '')
+    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
+    if role not in valid_roles:
+        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
+    conn = get_db()
+    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+    conn.execute('UPDATE users SET role = ? WHERE username = ?', (role, username))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'role': role})
+
+@app.route('/admin/users/reset-otp', methods=['POST'])
+@require_role('admin')
+def admin_reset_otp():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    conn = get_db()
+    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+
+    otp = generate_otp()
+    otp_hash = generate_password_hash(otp)
+    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
+    expiry_hours = policy['otp_expiry_hours'] if policy else 72
+    from datetime import timedelta
+    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
+
+    conn.execute(
+        'UPDATE users SET otp_hash = ?, otp_expires_at = ?, must_change_password = 1, password_hash = NULL WHERE username = ?',
+        (otp_hash, expires_at, username)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'otp': otp, 'expires_at': expires_at})
+
+@app.route('/admin/users/delete', methods=['POST'])
+@require_role('admin')
+def admin_delete_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    conn = get_db()
+    user = conn.execute('SELECT id, role FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+    if user['role'] == 'admin':
+        count = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0]
+        if count <= 1:
+            conn.close()
+            return jsonify({'error': 'Cannot delete the only admin account.'}), 400
+    conn.execute('DELETE FROM users WHERE username = ?', (username,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username})
+
+@app.route('/admin/policies', methods=['GET'])
+@require_role('admin')
+def admin_get_policies():
+    conn = get_db()
+    policy = conn.execute('SELECT * FROM org_policies LIMIT 1').fetchone()
+    conn.close()
+    return jsonify(dict(policy) if policy else {})
+
+@app.route('/admin/policies', methods=['POST'])
+@require_role('admin')
+def admin_update_policies():
+    data = request.json or {}
+    uid = get_current_user_id()
+    conn = get_db()
+    conn.execute('''
+        UPDATE org_policies SET
+            asset_sharing_mode = COALESCE(?, asset_sharing_mode),
+            sod_enforcement = COALESCE(?, sod_enforcement),
+            otp_expiry_hours = COALESCE(?, otp_expiry_hours),
+            updated_at = ?,
+            updated_by = ?
+        WHERE id = 1
+    ''', (
+        data.get('asset_sharing_mode'),
+        data.get('sod_enforcement'),
+        data.get('otp_expiry_hours'),
+        datetime.now().isoformat(),
+        uid
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 #===========
 # MAIN
