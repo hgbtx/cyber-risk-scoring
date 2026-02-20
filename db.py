@@ -14,7 +14,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'analyst',
+            role TEXT NOT NULL DEFAULT 'viewer',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -143,6 +143,42 @@ def init_db():
             UNIQUE(ticket_id, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role_name TEXT UNIQUE NOT NULL,
+            level INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS org_policies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL,
+            asset_sharing_mode TEXT NOT NULL DEFAULT 'private',
+            sod_enforcement TEXT NOT NULL DEFAULT 'hard',
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_by INTEGER,
+            FOREIGN KEY (org_id) REFERENCES organizations(id),
+            FOREIGN KEY (updated_by) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS sod_overrides (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            action_blocked TEXT NOT NULL,
+            override_by INTEGER NOT NULL,
+            reason TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (override_by) REFERENCES users(id)
+        );
+
     ''')
     conn.commit()
 
@@ -155,6 +191,26 @@ def init_db():
         conn.execute('ALTER TABLE commentTickets ADD COLUMN fixed TEXT')
     except:
         pass
+    conn.commit()
+
+    # Seed default organization if empty
+    if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
+        conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
+
+    # Seed default org policy if empty
+    if conn.execute('SELECT COUNT(*) FROM org_policies').fetchone()[0] == 0:
+        org_id = conn.execute('SELECT id FROM organizations LIMIT 1').fetchone()[0]
+        conn.execute(
+            'INSERT INTO org_policies (org_id, asset_sharing_mode, sod_enforcement) VALUES (?, ?, ?)',
+            (org_id, 'private', 'hard')
+        )
+
+    # Seed roles if empty
+    if conn.execute('SELECT COUNT(*) FROM roles').fetchone()[0] == 0:
+        conn.executemany(
+            'INSERT INTO roles (name, level) VALUES (?, ?)',
+            [('viewer', 1), ('analyst', 2), ('manager', 3), ('admin', 4)]
+        )
     conn.commit()
 
     conn.close()

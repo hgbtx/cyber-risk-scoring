@@ -341,6 +341,38 @@ Charts was designed with an interactive dashboard that generates personalized su
 # __F7. Accounts__
 
 ## Intended Purpose of Code
+The user access management (UAM) schema described below was designed to accommodate a single organization with the intention of scaling the tool to support multiple organizations by incorporating forward-compatible design choices to reduce steps to success migration later on.
+
+This intention is reflected in the design of the relational database tables necessary to set up the basic structure for UAM policies by:
+* centralizing authorization checks
+* using organizational policies table
+* avoiding global settings stored as constants
+
+### User Access Management Schema
+
+#### Database table setup
+- roles
+	- role_id
+	- role
+		- viewer (account registration default)
+		- tier 1 analyst
+		- tier 2 analyst
+		- manager
+		- admin
+	- level
+- org_policies
+	- org_id
+	- org_created_timestamp
+	- org_modified_timestamp
+	- asset_sharing_mode
+	- sod_enforcement
+- sod_overrides
+	- sod_id
+	- ticket_id
+	- requested_by
+	- approved_by
+	- action
+	- sod_timestamp
 
 ### Features
 
