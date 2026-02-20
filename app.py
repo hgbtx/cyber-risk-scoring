@@ -80,8 +80,8 @@ def register():
     conn.close()
     session['user_id'] = user_id
     session['email'] = email
-    session['role'] = 'analyst'
-    return jsonify({'success': True, 'user': {'id': user_id, 'email': email, 'role': 'analyst'}}), 201
+    session['role'] = 'viewer'
+    return jsonify({'success': True, 'user': {'id': user_id, 'email': email, 'role': 'viewer'}}), 201
 
 @app.route('/auth/login', methods=['POST'])
 def login():
