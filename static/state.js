@@ -26,6 +26,7 @@ let _publishedDateSliderDates = [];
 let cpeDetailSortKey = 'title';
 let cpeDetailSortDir = 'asc';
 let cveEnteredFromDetailView = false;
+let currentUser = null;
 
 // =====================
 // DOM REFERENCES
@@ -46,6 +47,7 @@ const chartFsBtn = document.getElementById('chartFullscreenToggle');
 // Theoretical max: KEV(1000) + EPSS(500) + Age(100) + CVSS(50) + AV(25) + Priv(20) + UI(15) + AC(10) + CIA(24) = 1744
 const PRIORITY_SCORE_MAX = 1744;
 const cveCounts = document.getElementById('cveCounts');
+const ROLE_LEVELS = { viewer: 1, analyst: 2, manager: 3, admin: 4 };
 
 // =====================
 // HELPERS HELPERS

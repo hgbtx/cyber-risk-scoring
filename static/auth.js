@@ -1,4 +1,20 @@
-let currentUser = null;
+
+function hasMinRole(minRole) {
+    if (!currentUser) return false;
+    return (ROLE_LEVELS[currentUser.role] || 0) >= (ROLE_LEVELS[minRole] || 99);
+}
+
+function applyRoleVisibility() {
+    // Hide/show elements with data-min-role attribute
+    document.querySelectorAll('[data-min-role]').forEach(el => {
+        const required = el.getAttribute('data-min-role');
+        el.style.display = hasMinRole(required) ? '' : 'none';
+    });
+
+    // Show/hide admin tab
+    const adminTab = document.querySelector('[data-tab="admin"]');
+    if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
+}
 
 async function checkAuth() {
     try {
@@ -24,6 +40,7 @@ function showApp() {
     bar.style.display = 'flex';
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
+    applyRoleVisibility();
     loadPersistedData();
 }
 

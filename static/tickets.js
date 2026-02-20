@@ -47,7 +47,6 @@ function formatMentions(text) {
 // RENDER TICKETS
 function renderTickets() {
     let visibleTickets;
-
     if (activeTicketFilter) {
         const { feature, date, owner, status, includeArchived } = activeTicketFilter;
         visibleTickets = includeArchived ? [...tickets] : tickets.filter(t => !t.isArchived);
@@ -64,7 +63,6 @@ function renderTickets() {
     } else {
         visibleTickets = tickets.filter(t => !t.isArchived);
     }
-
     // Sort tickets
     const sortMode = document.getElementById('ticketSortSelect')?.value || 'default';
     if (sortMode === 'newest') {
@@ -72,10 +70,8 @@ function renderTickets() {
     } else if (sortMode === 'oldest') {
         visibleTickets.sort((a, b) => new Date(a.created) - new Date(b.created));
     }
-
     const container = document.getElementById('ticketsList');
     container.innerHTML = '';
-
     // Show active filter bar
     if (activeTicketFilter) {
         const { feature, owner, status } = activeTicketFilter;
@@ -90,11 +86,8 @@ function renderTickets() {
             container.appendChild(bar);
         }
     }
-
     if (!visibleTickets.length) return;
-
     const uid = currentUser?.id;
-
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
         const isCollaborator = (t.collaborators || []).includes(currentUser?.email);
@@ -119,37 +112,34 @@ function renderTickets() {
                 }; border-radius: 3px; font-size: 0.9em; font-weight: 600; cursor: pointer;" onclick="filterByField('status', '${escapeHtml(t.status || 'Open')}')" title="Filter by status">${escapeHtml(t.status || 'Open')}</span>
             </div>
         </div>
-    
         <!-- Feature tag + creator -->
         <div style="margin-top: 4px; display: flex; gap: 6px; align-items: center;">
             <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600; cursor: pointer;" onclick="filterByField('feature', '${escapeHtml(t.feature)}')" title="Filter by feature">${escapeHtml(t.feature)}</span>
             <span style="font-size: 0.78em; color: #888; cursor: pointer;" onclick="filterByField('owner', '${escapeHtml(t.creator_email || 'unknown')}')" title="Filter by owner">by ${escapeHtml(t.creator_email || 'unknown')}</span>
         </div>
-    
         <!-- Description -->
         <p style="margin: 8px 0;">${escapeHtml(t.description)}</p>
-    
         <!-- Buttons row -->
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        ${t.isArchived ? `<button onclick="restoreTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Restore</button>` : `
+        ${t.isArchived ? `${hasMinRole('manager') ? `<button onclick="restoreTicket(${t.id})" style="padding: 4px 12px; background-color: #50b88e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Restore</button>` : ''}` : `
             ${t.isAccepted
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
                 </div>`
-                : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
+                : `${hasMinRole('manager') ? `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>` : ''}`
             }
             ${t.isResolved
                 ? `${t.accepted_by === currentUser?.email
                     ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
-                    <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
+                    ${hasMinRole('manager') ? `<button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>` : ''}`
                     : ''
                 }`
                 : (t.isAccepted && (t.accepted_by === currentUser?.email || isCollaborator)
                 ? `${t.accepted_by === currentUser?.email
-                    ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
-                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>`
+                    ? `${hasMinRole('analyst') ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>` : ''}
+                    ${hasMinRole('manager') ? `<button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>` : ''}`
                     : ''}
-                <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
+                ${hasMinRole('analyst') ? `<button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>` : ''}`
                 : '')
             }
             ${isOwner && !t.isAccepted
@@ -167,7 +157,6 @@ function renderTickets() {
                 </div>
             </div>`
             : ''}
-    
         <!-- Comments section (below buttons) -->
         ${t.comments && t.comments.length
             ? `<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
@@ -177,13 +166,12 @@ function renderTickets() {
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${formatMentions(c.comment_description)}</p>
                         ${(isOwner || isCollaborator) && !c.isFixed
-                            ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
+                            ? `${hasMinRole('analyst') ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>` : ''}`
                             : ''}
                     </div>
                 `).join('')}
             </div>`
             : ''}
-    
         <!-- Activity log (below buttons) -->
         ${t.activity && t.activity.length
             ? `<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">

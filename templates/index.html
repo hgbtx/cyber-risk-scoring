@@ -54,7 +54,7 @@
         <!-- Left Panel -->
         <div class="left-panel-container">
             <!--Drop Zone-->
-            <div class="drop-zone" id="dropZone">
+            <div class="drop-zone" id="dropZone" data-min-role="analyst">
                 <h3>Assets</h3>
                 <div id="selectedItems">
                     <p id="placeholder" style="color: #999; font-style: italic;">Drag and drop your assets here...</p>
@@ -179,6 +179,7 @@
                 <button class="tab-button" data-tab="cve">Asset Directory</button>
                 <button class="tab-button" data-tab="charts">Charts</button>
                 <button class="tab-button" data-tab="tickets">myTickets</button>
+                <button class="tab-button" data-tab="admin" style="display:none;">Admin</button>
             </div>
             <div class="tab-content">
 
@@ -382,7 +383,7 @@
                         <div id="dashDetailsRow" style="font-size: 0.88em; color: #57534E;"></div>
                     </div>
                     <div style="margin-bottom: 15px; justify-content: space-between; display: flex; align-items: center; max-width: 600px;">
-                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">&#65291; Create New Ticket</span>
+                        <span id="createTicketBtn" data-min-role="analyst" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">&#65291; Create New Ticket</span>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <select id="ticketSortSelect" onchange="renderTickets()" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; color: #57534E; cursor: pointer;">
                                 <option value="default">Sort: Default</option>
@@ -421,6 +422,80 @@
                         </div>
                     </div>
                     <div id="ticketsList"></div>
+                </div>
+
+                <!--Admin Tab-->
+                <div class="tab-panel" data-panel="admin">
+                    <h2>Administration</h2>
+
+                    <!-- Org Policies Section -->
+                    <div class="admin-section">
+                        <h3>Organization Policies</h3>
+                        <div class="admin-policy-grid">
+                            <div class="admin-field">
+                                <label for="policyAssetSharing">Asset Sharing Mode</label>
+                                <select id="policyAssetSharing">
+                                    <option value="private">Private (owner only, managers read-only)</option>
+                                    <option value="visible">Visible (all users read-only)</option>
+                                    <option value="collaborative">Collaborative (analysts+ can edit)</option>
+                                </select>
+                            </div>
+                            <div class="admin-field">
+                                <label for="policySodEnforcement">SoD Enforcement</label>
+                                <select id="policySodEnforcement">
+                                    <option value="hard">Hard (block violations)</option>
+                                    <option value="soft">Soft (warn but allow with override)</option>
+                                </select>
+                            </div>
+                            <div class="admin-field">
+                                <label for="policyOtpExpiry">OTP Expiry (hours)</label>
+                                <input type="number" id="policyOtpExpiry" min="1" max="720" value="72" style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                            </div>
+                        </div>
+                        <button onclick="saveOrgPolicies()" class="admin-save-btn">Save Policies</button>
+                        <span id="policyStatus" style="margin-left:12px;font-size:0.85em;color:#50b88e;"></span>
+                    </div>
+
+                    <!-- User Management Section -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>User Management</h3>
+                        <div style="margin-bottom:15px;">
+                            <span id="adminCreateUserBtn" style="cursor:pointer;color:#be7a15;font-size:1.1em;">&#65291; Create New User</span>
+                        </div>
+                        <div id="adminCreateUserForm" style="display:none;max-width:400px;border:1px solid #ddd;border-radius:6px;padding:16px;background:#fafafa;margin-bottom:20px;">
+                            <h4 style="margin-top:0;">New User</h4>
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:0.85em;font-weight:600;color:#57534E;">Username</label><br>
+                                <input type="text" id="adminNewUsername" placeholder="Enter username" style="width:100%;padding:8px;font-size:14px;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:0.85em;font-weight:600;color:#57534E;">Role</label><br>
+                                <select id="adminNewRole" style="width:100%;padding:8px;font-size:14px;border:2px solid #ddd;border-radius:4px;">
+                                    <option value="viewer">Viewer</option>
+                                    <option value="analyst">Analyst</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <button onclick="adminCreateUser()" style="padding:8px 16px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;">Create</button>
+                                <button onclick="document.getElementById('adminCreateUserForm').style.display='none'" style="padding:8px 16px;background:#ddd;color:#57534E;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+                            </div>
+                            <div id="adminCreateResult" style="margin-top:10px;font-size:0.85em;"></div>
+                        </div>
+                        <table id="adminUsersTable" class="admin-users-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -483,6 +558,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="{{ url_for('static', filename='admin.js') }}"></script>
     <script src="/static/state.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/panel.js"></script>
