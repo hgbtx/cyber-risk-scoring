@@ -65,28 +65,46 @@ def generate_otp(length=12):
     return '-'.join(raw[i:i+4] for i in range(0, length, 4))
 
 #---AUTHENTICATION ENDPOINTS---
-@app.route('/auth/register', methods=['POST'])
-def register():
+@app.route('/auth/verify-otp', methods=['POST'])
+def verify_otp():
     data = request.json or {}
     username = data.get('username', '').strip()
+    otp = data.get('otp', '')
+    if not username or not otp:
+        return jsonify({'error': 'Username and one-time password are required.'}), 400
+    conn = get_db()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    if not user or not user['otp_hash']:
+        return jsonify({'error': 'Invalid username or one-time password.'}), 401
+    if not check_password_hash(user['otp_hash'], otp):
+        return jsonify({'error': 'Invalid username or one-time password.'}), 401
+    if user['otp_expires_at']:
+        expiry = datetime.fromisoformat(user['otp_expires_at'])
+        if datetime.now() > expiry:
+            return jsonify({'error': 'One-time password has expired. Contact your administrator.'}), 401
+    session['user_id'] = user['id']
+    session['username'] = user['username']
+    session['role'] = user['role']
+    return jsonify({'success': True, 'must_change_password': bool(user['must_change_password'])})
+
+@app.route('/auth/set-password', methods=['POST'])
+@login_required
+def set_password():
+    data = request.json or {}
     password = data.get('password', '')
-    if not username or not password:
-        return jsonify({'error': 'Username and password are required.'}), 400
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters.'}), 400
-    conn = get_db()
-    if conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
-        conn.close()
-        return jsonify({'error': 'An account with that username already exists.'}), 409
+    uid = get_current_user_id()
     pw_hash = generate_password_hash(password)
-    cursor = conn.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, pw_hash))
+    conn = get_db()
+    conn.execute(
+        'UPDATE users SET password_hash = ?, otp_hash = NULL, otp_expires_at = NULL, must_change_password = 0 WHERE id = ?',
+        (pw_hash, uid)
+    )
     conn.commit()
-    user_id = cursor.lastrowid
     conn.close()
-    session['user_id'] = user_id
-    session['username'] = username
-    session['role'] = 'viewer'
-    return jsonify({'success': True, 'user': {'id': user_id, 'username': username, 'role': 'viewer'}}), 201
+    return jsonify({'success': True})
 
 @app.route('/auth/login', methods=['POST'])
 def login():
@@ -98,8 +116,10 @@ def login():
     conn = get_db()
     user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
     conn.close()
-    if not user or not check_password_hash(user['password_hash'], password):
+    if not user or not user['password_hash'] or not check_password_hash(user['password_hash'], password):
         return jsonify({'error': 'Invalid username or password.'}), 401
+    if user['must_change_password']:
+        return jsonify({'error': 'Please use the New User login to set your password.'}), 403
     session['user_id'] = user['id']
     session['username'] = user['username']
     session['role'] = user['role']
