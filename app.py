@@ -863,7 +863,7 @@ def ticket_comment():
         mentioned_user = conn.execute(
             'SELECT id, email FROM users WHERE email = ?', (username,)
         ).fetchone()
-        if mentioned_user and mentioned_user['id'] != uid:
+        if mentioned_user and mentioned_user['id'] != uid and (not accepted or mentioned_user['id'] != accepted['user_id']):
             existing = conn.execute(
                 'SELECT id FROM ticketCollaborators WHERE ticket_id = ? AND user_id = ?',
                 (ticket_id, mentioned_user['id'])
