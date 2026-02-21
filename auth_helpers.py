@@ -35,6 +35,45 @@ def require_role(min_role):
         return decorated
     return decorator
 
+def require_permission(category, permission):
+    """Decorator that checks the role_permissions table instead of hardcoded role levels."""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({'error': 'Authentication required'}), 401
+            role = session.get('role', 'viewer')
+            conn = get_db()
+            row = conn.execute(
+                'SELECT access_level FROM role_permissions WHERE category = ? AND permission = ? AND role = ?',
+                (category, permission, role)
+            ).fetchone()
+            conn.close()
+            access = row['access_level'] if row else 'blocked'
+            if access == 'blocked':
+                return jsonify({'error': 'Insufficient permissions'}), 403
+            if access in ('managerial approval', 'admin approval'):
+                return jsonify({
+                    'error': 'This action requires approval',
+                    'requires_approval': access
+                }), 202
+            # 'read only' and 'read/write' both pass through —
+            # individual routes handle read-only logic if needed
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
+def check_permission(category, permission):
+    """Non-decorator version — returns the access_level string for inline checks."""
+    role = session.get('role', 'viewer')
+    conn = get_db()
+    row = conn.execute(
+        'SELECT access_level FROM role_permissions WHERE category = ? AND permission = ? AND role = ?',
+        (category, permission, role)
+    ).fetchone()
+    conn.close()
+    return row['access_level'] if row else 'blocked'
 
 def check_ownership(resource_type, resource_id, user_id):
     """Check if a user owns a resource, and whether org policy grants wider access."""

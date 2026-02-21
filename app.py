@@ -11,7 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
-from auth_helpers import require_role, check_ownership, check_sod, log_sod_override
+from auth_helpers import require_role, require_permission, check_permission, check_ownership, check_sod, log_sod_override
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -144,7 +144,7 @@ def home():
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
-@require_role('viewer')
+@require_permission('Search', 'Perform searches')
 def get_kev_list():
     global kev_cache, kev_cache_time
     if time.time() - kev_cache_time > KEV_CACHE_TTL or not kev_cache:
@@ -158,7 +158,7 @@ def get_kev_list():
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
-@require_role('viewer')
+@require_permission('Search', 'Perform searches')
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
@@ -521,6 +521,7 @@ def save_assets():
 
 #---ARCHIVE ASSETS---
 @app.route('/db/archived-assets', methods=['POST'])
+@require_permission('Asset Directory', 'Archive assets')
 def archive_asset():
     uid = get_current_user_id()
     data = request.json or {}
@@ -558,7 +559,7 @@ def archive_asset():
 
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
-@require_role('viewer')
+@require_permission('Asset Directory', 'Viewable Asset Directory tab')
 def load_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -573,7 +574,7 @@ def load_assets():
 
 #---LOAD ARCHIVED ASSETS---
 @app.route('/db/load-archived-assets', methods=['GET'])
-@require_role('viewer')
+@require_permission('Asset Directory', 'Viewable Asset Directory tab')
 def load_archived_assets():
     uid = get_current_user_id()
     conn = get_db()
@@ -592,7 +593,7 @@ def load_archived_assets():
 
 #---CREATE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTickets', 'Create tickets')
 def save_tickets():
     uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
@@ -628,7 +629,7 @@ def save_tickets():
 
 #---TICKET STATUS---
 @app.route('/db/ticket-status', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTickets', 'Update ticket status')
 def ticket_status():
     uid = get_current_user_id()
     data = request.json or {}
@@ -675,7 +676,7 @@ def ticket_delete():
 
 #---ACCEPT TICKET---
 @app.route('/db/ticket-acceptance', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTickets', 'Accept tickets')
 def ticket_acceptance():
     uid = get_current_user_id()
     data = request.json or {}
@@ -715,7 +716,7 @@ def ticket_acceptance():
 
 #---RESOLVE TICKET---
 @app.route('/db/ticket-resolution', methods=['POST'])
-@require_role('manager')
+@require_permission('myTickets', 'Resolve tickets')
 def ticket_resolution():
     uid = get_current_user_id()
     data = request.json or {}
@@ -919,6 +920,11 @@ def ticket_comment_fix():
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
+    
+    access = check_permission('myTickets', 'Fix comment tickets')
+    if access == 'blocked':
+        conn.close()
+        return jsonify({'error': 'Insufficient permissions'}), 403
 
     is_owner = ticket['user_id'] == uid
     is_collaborator = conn.execute(
@@ -962,7 +968,7 @@ def ticket_reopen():
 
 #---ARCHIVE TICKET---
 @app.route('/db/ticket-archive', methods=['POST'])
-@require_role('manager')
+@require_permission('myTickets', 'Delete tickets')
 def ticket_archive():
     uid = get_current_user_id()
     data = request.json or {}
@@ -1014,7 +1020,7 @@ def ticket_archive():
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
-@require_role('viewer')
+@require_permission('myTickets', 'Viewable myTickets tab')
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
@@ -1118,7 +1124,7 @@ def load_tickets():
 
 #---TICKET STATS---
 @app.route('/db/ticket-stats', methods=['GET'])
-@require_role('viewer')
+@require_permission('myTickets', 'Viewable myTickets tab')
 def ticket_stats():
     conn = get_db()
 
@@ -1344,6 +1350,50 @@ def admin_update_policies():
         datetime.now().isoformat(),
         uid
     ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/admin/permissions', methods=['GET'])
+@require_role('admin')
+def get_permissions():
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT category, permission, role, access_level FROM role_permissions ORDER BY id'
+    ).fetchall()
+    conn.close()
+    result = {}
+    for r in rows:
+        cat = r['category']
+        perm = r['permission']
+        role = r['role']
+        if cat not in result:
+            result[cat] = {}
+        if perm not in result[cat]:
+            result[cat][perm] = {}
+        result[cat][perm][role] = r['access_level']
+    return jsonify(result)
+
+@app.route('/admin/permissions', methods=['POST'])
+@require_role('admin')
+def update_permission():
+    data = request.get_json()
+    category = data.get('category')
+    permission = data.get('permission')
+    role = data.get('role')
+    access_level = data.get('access_level')
+
+    valid_levels = ['blocked', 'read only', 'read/write', 'managerial approval', 'admin approval']
+    if access_level not in valid_levels:
+        return jsonify({'error': 'Invalid access level'}), 400
+
+    conn = get_db()
+    conn.execute(
+        '''UPDATE role_permissions
+           SET access_level = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?
+           WHERE category = ? AND permission = ? AND role = ?''',
+        (access_level, session.get('user_id'), category, permission, role)
+    )
     conn.commit()
     conn.close()
     return jsonify({'success': True})

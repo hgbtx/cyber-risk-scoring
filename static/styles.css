@@ -953,3 +953,42 @@ height: auto;
 .admin-users-table tbody tr:hover {
     background-color: #f5f0e8;
 }
+
+/* Permissions Matrix */
+.admin-perm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.admin-perm-table thead th {
+    background: #ededed;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid #ccc;
+    font-weight: 600;
+    color: #444;
+}
+
+.admin-perm-table tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.admin-perm-table tbody tr:hover {
+    background-color: #f5f0e8;
+}
+
+.perm-cell {
+    min-width: 130px;
+}
+
+.perm-select {
+    padding: 4px 6px;
+    font-size: 0.85em;
+    border: 2px solid #be7a15;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+}
