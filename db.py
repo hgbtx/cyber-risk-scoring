@@ -24,9 +24,8 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS assets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cpeName INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            cpeName TEXT NOT NULL,
             title TEXT,
             cpeData TEXT,
             cveData TEXT,

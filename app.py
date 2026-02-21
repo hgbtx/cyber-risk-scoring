@@ -11,7 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
-from auth_helpers import require_role, require_permission, check_permission, check_ownership, check_sod, log_sod_override
+from auth_helpers import require_role, require_permission, check_permission, check_ownership, check_sod, log_sod_override, get_role_level
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -491,6 +491,7 @@ def load_cpe_cache():
 
 #---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
+@require_permission('Asset Directory', 'Save assets')
 def save_assets():
     uid = get_current_user_id()
     assets = request.json.get('assets', [])
@@ -562,8 +563,20 @@ def archive_asset():
 @require_permission('Asset Directory', 'Viewable Asset Directory tab')
 def load_assets():
     uid = get_current_user_id()
+    role = session.get('role', 'viewer')
     conn = get_db()
-    rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
+    policy = conn.execute('SELECT asset_sharing_mode FROM org_policies LIMIT 1').fetchone()
+    sharing_mode = policy['asset_sharing_mode'] if policy else 'private'
+
+    if sharing_mode == 'visible':
+        rows = conn.execute('SELECT * FROM assets').fetchall()
+    elif sharing_mode == 'collaborative' and get_role_level(role) >= get_role_level('analyst'):
+        rows = conn.execute('SELECT * FROM assets').fetchall()
+    elif sharing_mode == 'private' and get_role_level(role) >= get_role_level('manager'):
+        rows = conn.execute('SELECT * FROM assets').fetchall()
+    else:
+        rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
+
     conn.close()
     return jsonify([{
         'cpeName': r['cpeName'],
@@ -577,13 +590,36 @@ def load_assets():
 @require_permission('Asset Directory', 'Viewable Asset Directory tab')
 def load_archived_assets():
     uid = get_current_user_id()
+    role = session.get('role', 'viewer')
     conn = get_db()
-    rows = conn.execute('''
-        SELECT assets.cpeName
-        FROM archivedAssets
-        JOIN assets ON archivedAssets.asset_id = assets.id
-        WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
-    ''', (uid,)).fetchall()
+    policy = conn.execute('SELECT asset_sharing_mode FROM org_policies LIMIT 1').fetchone()
+    sharing_mode = policy['asset_sharing_mode'] if policy else 'private'
+
+    if sharing_mode == 'visible':
+        rows = conn.execute('''
+            SELECT assets.cpeName FROM archivedAssets
+            JOIN assets ON archivedAssets.asset_id = assets.id
+            WHERE archivedAssets.isArchived = 1
+        ''').fetchall()
+    elif sharing_mode == 'collaborative' and get_role_level(role) >= get_role_level('analyst'):
+        rows = conn.execute('''
+            SELECT assets.cpeName FROM archivedAssets
+            JOIN assets ON archivedAssets.asset_id = assets.id
+            WHERE archivedAssets.isArchived = 1
+        ''').fetchall()
+    elif sharing_mode == 'private' and get_role_level(role) >= get_role_level('manager'):
+        rows = conn.execute('''
+            SELECT assets.cpeName FROM archivedAssets
+            JOIN assets ON archivedAssets.asset_id = assets.id
+            WHERE archivedAssets.isArchived = 1
+        ''').fetchall()
+    else:
+        rows = conn.execute('''
+            SELECT assets.cpeName FROM archivedAssets
+            JOIN assets ON archivedAssets.asset_id = assets.id
+            WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
+        ''', (uid,)).fetchall()
+
     conn.close()
     return jsonify([r['cpeName'] for r in rows])
 
