@@ -11,7 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
-from auth_helpers import require_role, require_permission, check_permission, check_ownership, check_sod, log_sod_override, get_role_level
+from auth_helpers import require_role, require_permission, get_role_level
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -806,7 +806,7 @@ def ticket_resolution():
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
-@require_role('manager')
+@require_permission('myTickets', 'Reassign tickets')
 def ticket_reassign():
     uid = get_current_user_id()
     data = request.json or {}
@@ -864,7 +864,7 @@ def ticket_reassign():
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTickets', 'Comment tickets')
 def ticket_comment():
     uid = get_current_user_id()
     data = request.json or {}
@@ -939,7 +939,7 @@ def ticket_comment():
 
 #---FIX COMMENT---
 @app.route('/db/ticket-comment-fix', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTickets', 'Fix comment tickets')
 def ticket_comment_fix():
     uid = get_current_user_id()
     data = request.json or {}
@@ -956,11 +956,6 @@ def ticket_comment_fix():
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
-    
-    access = check_permission('myTickets', 'Fix comment tickets')
-    if access == 'blocked':
-        conn.close()
-        return jsonify({'error': 'Insufficient permissions'}), 403
 
     is_owner = ticket['user_id'] == uid
     is_collaborator = conn.execute(
