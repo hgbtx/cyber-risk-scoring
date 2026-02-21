@@ -816,11 +816,7 @@ def ticket_resolution():
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
-<<<<<<< HEAD
-@require_permission('myTicket', 'Reassign tickets')
-=======
 @require_permission('myTickets', 'Reassign tickets')
->>>>>>> dffc1079a9846ab7912dc83b04eb2c78edf234aa
 def ticket_reassign():
     uid = get_current_user_id()
     data = request.json or {}
@@ -878,11 +874,7 @@ def ticket_reassign():
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
-<<<<<<< HEAD
-@require_permission('myTicket', 'Comment tickets')
-=======
 @require_permission('myTickets', 'Comment tickets')
->>>>>>> dffc1079a9846ab7912dc83b04eb2c78edf234aa
 def ticket_comment():
     uid = get_current_user_id()
     data = request.json or {}
@@ -957,11 +949,7 @@ def ticket_comment():
 
 #---FIX COMMENT---
 @app.route('/db/ticket-comment-fix', methods=['POST'])
-<<<<<<< HEAD
-@require_permission('myTicket', 'Fix tickets')
-=======
 @require_permission('myTickets', 'Fix comment tickets')
->>>>>>> dffc1079a9846ab7912dc83b04eb2c78edf234aa
 def ticket_comment_fix():
     uid = get_current_user_id()
     data = request.json or {}
