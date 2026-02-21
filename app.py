@@ -48,6 +48,18 @@ def parse_date(date_str):
 # AUTHENTICATION
 #=====================
 
+@app.before_request
+def refresh_session_role():
+    uid = session.get('user_id')
+    if uid:
+        conn = get_db()
+        user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+        conn.close()
+        if user:
+            session['role'] = user['role']
+        else:
+            session.clear()
+
 def get_current_user_id():
     return session.get('user_id')
 
@@ -463,7 +475,7 @@ def count_high_risk(series, threshold=7.0):
 
 #---LOAD CPE CACHE---
 @app.route('/db/load-cpe-cache', methods=['POST'])
-@require_role('viewer')
+@require_permission('Search', 'Viewable Search tab')
 def load_cpe_cache():
     cpe_names = request.json.get('cpeNames', [])
     if not cpe_names:
@@ -705,8 +717,6 @@ def ticket_status():
     return jsonify({'success': True, 'ticket_id': ticket_id, 'status': status, 'updated': updated_ts})
 
 #---DELETE TICKET---
-# @app.route('/db/ticket-delete', methods=['POST'])
-# @require_role('manager')
 def ticket_delete():
     pass
 
@@ -806,7 +816,7 @@ def ticket_resolution():
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
-@require_role('manager')
+@require_permission('myTicket', 'Reassign tickets')
 def ticket_reassign():
     uid = get_current_user_id()
     data = request.json or {}
@@ -864,7 +874,7 @@ def ticket_reassign():
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTicket', 'Comment tickets')
 def ticket_comment():
     uid = get_current_user_id()
     data = request.json or {}
@@ -939,7 +949,7 @@ def ticket_comment():
 
 #---FIX COMMENT---
 @app.route('/db/ticket-comment-fix', methods=['POST'])
-@require_role('analyst')
+@require_permission('myTicket', 'Fix tickets')
 def ticket_comment_fix():
     uid = get_current_user_id()
     data = request.json or {}
@@ -997,8 +1007,6 @@ def ticket_comment_fix():
     })
 
 #---REOPEN TICKET---
-# @app.route('/db/ticket-reopen', methods=['POST'])
-# @require_role('manager')
 def ticket_reopen():
     pass
 
@@ -1425,10 +1433,13 @@ def update_permission():
 
     conn = get_db()
     conn.execute(
-        '''UPDATE role_permissions
-           SET access_level = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?
-           WHERE category = ? AND permission = ? AND role = ?''',
-        (access_level, session.get('user_id'), category, permission, role)
+        '''INSERT INTO role_permissions (category, permission, role, access_level, updated_at, updated_by)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            ON CONFLICT(category, permission, role)
+            DO UPDATE SET access_level = excluded.access_level,
+                        updated_at = excluded.updated_at,
+                        updated_by = excluded.updated_by''',
+        (category, permission, role, access_level, session.get('user_id'))
     )
     conn.commit()
     conn.close()
@@ -1444,4 +1455,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
