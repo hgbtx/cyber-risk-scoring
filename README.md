@@ -341,85 +341,6 @@ Charts was designed with an interactive dashboard that generates personalized su
 # __F7. Accounts__
 
 ## Intended Purpose of Code
-The user access management (UAM) schema described below was designed to accommodate a single organization with the intention of scaling the tool to support multiple organizations by incorporating forward-compatible design choices to reduce steps to success migration later on.
-
-This intention is reflected in the design of the relational database tables necessary to set up the basic structure for UAM policies by:
-* centralizing authorization checks
-* using organizational policies table
-* avoiding global settings stored as constants
-
-### User Access Management Schema
-
-#### Database table setup
-- roles
-	- role_id
-	- role
-		- viewer (account registration default)
-		- tier 1 analyst
-		- tier 2 analyst
-		- manager
-		- admin
-	- level
-- org_policies
-	- org_id
-	- org_created_timestamp
-	- org_modified_timestamp
-	- asset_sharing_mode
-	- sod_enforcement
-- sod_overrides
-	- sod_id
-	- ticket_id
-	- requested_by
-	- approved_by
-	- action
-	- sod_timestamp
-
-# Default Permissions Matrix
-
-## Search Permissions
-
-| Permission                    | Viewer         | Analyst             | Manager             | Admin      |
-| ----------------------------- | -------------- | ------------------- | ------------------- | ---------- |
-| Viewable Search tab           | read only      | read only           | read only           | read/write |
-| Perform searches              | blocked        | read/write          | read/write          | read/write |
-| Drag and drop to Assets       | blocked        | read/write          | read/write          | read/write |
-| Add assets to Asset Directory | blocked        | managerial approval | read/write          | read/write |
-
-## myCharts Permissions
-
-| Permission                       | Viewer    | Analyst    | Manager    | Admin      |
-| -------------------------------- | --------- | ---------- | ---------- | ---------- |
-| Viewable myCharts tab            | read only | read only  | read only  | read/write |
-| Drag and drop charts to dashboard| blocked   | read/write | read/write | read/write |
-| Download PNG                     | blocked   | read/write | read/write | read/write |
-| Download PDF                     | blocked   | read/write | read/write | read/write |
-
-## Asset Directory Permissions
-
-| Permission                  | Viewer    | Analyst             | Manager             | Admin      |
-| --------------------------- | --------- | ------------------- | ------------------- | ---------- |
-| Viewable Asset Directory tab| read only | read only           | read only           | read/write |
-| Save assets                 | blocked   | read/write          | read/write          | read/write |
-| Archive assets              | blocked   | managerial approval | read/write          | read/write |
-| Delete assets               | blocked   | blocked             | admin approval      | read/write |
-| Download CSV                | blocked   | read/write          | read/write          | read/write |
-| Download JSON               | blocked   | read/write          | read/write          | read/write |
-
-## myTickets Permissions
-
-| Permission            | Viewer    | Analyst             | Manager    | Admin      |
-| --------------------- | --------- | ------------------- | ---------- | ---------- |
-| Viewable myTickets tab| read only | read only           | read only  | read/write |
-| Create tickets        | read/write| read/write          | read/write | read/write |
-| Delete tickets        | blocked   | blocked             | read/write | read/write |
-| Resolve tickets       | blocked   | managerial approval | read/write | read/write |
-| Reassign tickets      | blocked   | blocked             | read/write | read/write |
-| Reopen tickets        | blocked   | managerial approval | read/write | read/write |
-| Accept tickets        | blocked   | read/write          | read/write | read/write |
-| Update ticket status  | blocked   | read/write          | read/write | read/write |
-| Comment tickets       | read only | read/write          | read/write | read/write |
-| Fix comment tickets   | blocked   | blocked             | read/write | read/write |
-| Download ticket log   | blocked   | managerial approval | read/write | read/write |
 
 ### Features
 
@@ -427,7 +348,7 @@ This intention is reflected in the design of the relational database tables nece
 
 ### Known Issues
 
-* Admins should be able to create new roles and assign hierarchy
+* None yet
 
 ***
 ##### Documentation, code, data, and images for this project can be found on github at:  [hgbtx/cyber-risk-scoring](https://github.com/hgbtx/cyber-risk-scoring/)

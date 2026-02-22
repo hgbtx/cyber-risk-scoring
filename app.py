@@ -6,12 +6,11 @@ from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__)
 
-import time, requests, os, json, re, secrets, string
+import time, requests, os, json, re
 from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
-from auth_helpers import require_role, require_permission, get_role_level
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -48,85 +47,58 @@ def parse_date(date_str):
 # AUTHENTICATION
 #=====================
 
-@app.before_request
-def refresh_session_role():
-    uid = session.get('user_id')
-    if uid:
-        conn = get_db()
-        user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
-        conn.close()
-        if user:
-            session['role'] = user['role']
-        else:
-            session.clear()
+#---AUTHENTICATION HELPERS---
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 def get_current_user_id():
     return session.get('user_id')
 
-def generate_otp(length=12):
-    alphabet = string.ascii_uppercase + string.digits
-    raw = ''.join(secrets.choice(alphabet) for _ in range(length))
-    return '-'.join(raw[i:i+4] for i in range(0, length, 4))
-
 #---AUTHENTICATION ENDPOINTS---
-@app.route('/auth/verify-otp', methods=['POST'])
-def verify_otp():
+@app.route('/auth/register', methods=['POST'])
+def register():
     data = request.json or {}
-    username = data.get('username', '').strip()
-    otp = data.get('otp', '')
-    if not username or not otp:
-        return jsonify({'error': 'Username and one-time password are required.'}), 400
-    conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-    conn.close()
-    if not user or not user['otp_hash']:
-        return jsonify({'error': 'Invalid username or one-time password.'}), 401
-    if not check_password_hash(user['otp_hash'], otp):
-        return jsonify({'error': 'Invalid username or one-time password.'}), 401
-    if user['otp_expires_at']:
-        expiry = datetime.fromisoformat(user['otp_expires_at'])
-        if datetime.now() > expiry:
-            return jsonify({'error': 'One-time password has expired. Contact your administrator.'}), 401
-    session['user_id'] = user['id']
-    session['username'] = user['username']
-    session['role'] = user['role']
-    return jsonify({'success': True, 'must_change_password': bool(user['must_change_password'])})
-
-@app.route('/auth/set-password', methods=['POST'])
-def set_password():
-    data = request.json or {}
+    email = data.get('email', '').strip().lower()
     password = data.get('password', '')
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters.'}), 400
-    uid = get_current_user_id()
-    pw_hash = generate_password_hash(password)
     conn = get_db()
-    conn.execute(
-        'UPDATE users SET password_hash = ?, otp_hash = NULL, otp_expires_at = NULL, must_change_password = 0 WHERE id = ?',
-        (pw_hash, uid)
-    )
+    if conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone():
+        conn.close()
+        return jsonify({'error': 'An account with that email already exists.'}), 409
+    pw_hash = generate_password_hash(password)
+    cursor = conn.execute('INSERT INTO users (email, password_hash) VALUES (?, ?)', (email, pw_hash))
     conn.commit()
+    user_id = cursor.lastrowid
     conn.close()
-    return jsonify({'success': True})
+    session['user_id'] = user_id
+    session['email'] = email
+    session['role'] = 'analyst'
+    return jsonify({'success': True, 'user': {'id': user_id, 'email': email, 'role': 'analyst'}}), 201
 
 @app.route('/auth/login', methods=['POST'])
 def login():
     data = request.json or {}
-    username = data.get('username', '').strip()
+    email = data.get('email', '').strip().lower()
     password = data.get('password', '')
-    if not username or not password:
-        return jsonify({'error': 'Username and password are required.'}), 400
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
     conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
     conn.close()
-    if not user or not user['password_hash'] or not check_password_hash(user['password_hash'], password):
-        return jsonify({'error': 'Invalid username or password.'}), 401
-    if user['must_change_password']:
-        return jsonify({'error': 'Please use the New User login to set your password.'}), 403
+    if not user or not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Invalid email or password.'}), 401
     session['user_id'] = user['id']
-    session['username'] = user['username']
+    session['email'] = user['email']
     session['role'] = user['role']
-    return jsonify({'success': True, 'user': {'id': user['id'], 'username': user['username'], 'role': user['role']}})
+    return jsonify({'success': True, 'user': {'id': user['id'], 'email': user['email'], 'role': user['role']}})
 
 @app.route('/auth/logout', methods=['POST'])
 def logout():
@@ -139,7 +111,7 @@ def auth_me():
     if not uid:
         return jsonify({'authenticated': False}), 401
     conn = get_db()
-    user = conn.execute('SELECT id, username, role FROM users WHERE id = ?', (uid,)).fetchone()
+    user = conn.execute('SELECT id, email, role FROM users WHERE id = ?', (uid,)).fetchone()
     conn.close()
     if not user:
         return jsonify({'authenticated': False}), 401
@@ -156,7 +128,7 @@ def home():
 
 #---KEV CACHING---
 @app.route('/api/get_kev_list', methods=['POST'])
-@require_permission('Search', 'Perform searches')
+@login_required
 def get_kev_list():
     global kev_cache, kev_cache_time
     if time.time() - kev_cache_time > KEV_CACHE_TTL or not kev_cache:
@@ -170,7 +142,7 @@ def get_kev_list():
 
 #---NVD CPE FETCH---
 @app.route('/api/search', methods=['POST'])
-@require_permission('Search', 'Perform searches')
+@login_required
 def search_cpe_names():
     '''A function that calls the NVD API to return CPE results.'''
     keyword = request.json.get('searchTerm', '')
@@ -260,6 +232,7 @@ def fetch_cves_for_cpe(cpe_uri: str) -> list[dict]:
 
 #---NVD CVE FETCH---
 @app.route('/api/fetch-cves', methods=['POST'])
+@login_required
 def api_fetch_cves():
     data = request.json
     cpe_uri = data.get('cpeUri')
@@ -309,6 +282,7 @@ def fetch_kev_ids() -> set:
 
 #---EPSS SCORE FETCH---
 @app.route('/api/fetch-epss', methods=['POST'])
+@login_required
 def fetch_epss_scores(cve_ids: list[str]) -> dict[str, float]:
     """
     Fetch EPSS scores for a list of CVE IDs.
@@ -475,7 +449,7 @@ def count_high_risk(series, threshold=7.0):
 
 #---LOAD CPE CACHE---
 @app.route('/db/load-cpe-cache', methods=['POST'])
-@require_permission('Search', 'Viewable Search tab')
+@login_required
 def load_cpe_cache():
     cpe_names = request.json.get('cpeNames', [])
     if not cpe_names:
@@ -503,7 +477,7 @@ def load_cpe_cache():
 
 #---SAVE ASSETS---
 @app.route('/db/save-assets', methods=['POST'])
-@require_permission('Asset Directory', 'Save assets')
+@login_required
 def save_assets():
     uid = get_current_user_id()
     assets = request.json.get('assets', [])
@@ -534,7 +508,7 @@ def save_assets():
 
 #---ARCHIVE ASSETS---
 @app.route('/db/archived-assets', methods=['POST'])
-@require_permission('Asset Directory', 'Archive assets')
+@login_required
 def archive_asset():
     uid = get_current_user_id()
     data = request.json or {}
@@ -572,23 +546,11 @@ def archive_asset():
 
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
-@require_permission('Asset Directory', 'Viewable Asset Directory tab')
+@login_required
 def load_assets():
     uid = get_current_user_id()
-    role = session.get('role', 'viewer')
     conn = get_db()
-    policy = conn.execute('SELECT asset_sharing_mode FROM org_policies LIMIT 1').fetchone()
-    sharing_mode = policy['asset_sharing_mode'] if policy else 'private'
-
-    if sharing_mode == 'visible':
-        rows = conn.execute('SELECT * FROM assets').fetchall()
-    elif sharing_mode == 'collaborative' and get_role_level(role) >= get_role_level('analyst'):
-        rows = conn.execute('SELECT * FROM assets').fetchall()
-    elif sharing_mode == 'private' and get_role_level(role) >= get_role_level('manager'):
-        rows = conn.execute('SELECT * FROM assets').fetchall()
-    else:
-        rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
-
+    rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
     conn.close()
     return jsonify([{
         'cpeName': r['cpeName'],
@@ -599,39 +561,16 @@ def load_assets():
 
 #---LOAD ARCHIVED ASSETS---
 @app.route('/db/load-archived-assets', methods=['GET'])
-@require_permission('Asset Directory', 'Viewable Asset Directory tab')
+@login_required
 def load_archived_assets():
     uid = get_current_user_id()
-    role = session.get('role', 'viewer')
     conn = get_db()
-    policy = conn.execute('SELECT asset_sharing_mode FROM org_policies LIMIT 1').fetchone()
-    sharing_mode = policy['asset_sharing_mode'] if policy else 'private'
-
-    if sharing_mode == 'visible':
-        rows = conn.execute('''
-            SELECT assets.cpeName FROM archivedAssets
-            JOIN assets ON archivedAssets.asset_id = assets.id
-            WHERE archivedAssets.isArchived = 1
-        ''').fetchall()
-    elif sharing_mode == 'collaborative' and get_role_level(role) >= get_role_level('analyst'):
-        rows = conn.execute('''
-            SELECT assets.cpeName FROM archivedAssets
-            JOIN assets ON archivedAssets.asset_id = assets.id
-            WHERE archivedAssets.isArchived = 1
-        ''').fetchall()
-    elif sharing_mode == 'private' and get_role_level(role) >= get_role_level('manager'):
-        rows = conn.execute('''
-            SELECT assets.cpeName FROM archivedAssets
-            JOIN assets ON archivedAssets.asset_id = assets.id
-            WHERE archivedAssets.isArchived = 1
-        ''').fetchall()
-    else:
-        rows = conn.execute('''
-            SELECT assets.cpeName FROM archivedAssets
-            JOIN assets ON archivedAssets.asset_id = assets.id
-            WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
-        ''', (uid,)).fetchall()
-
+    rows = conn.execute('''
+        SELECT assets.cpeName
+        FROM archivedAssets
+        JOIN assets ON archivedAssets.asset_id = assets.id
+        WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
+    ''', (uid,)).fetchall()
     conn.close()
     return jsonify([r['cpeName'] for r in rows])
 
@@ -639,9 +578,9 @@ def load_archived_assets():
 # TICKET DB ENDPOINTS
 #=====================
 
-#---CREATE TICKETS---
+#---SAVE TICKETS---
 @app.route('/db/save-tickets', methods=['POST'])
-@require_permission('myTickets', 'Create tickets')
+@login_required
 def save_tickets():
     uid = get_current_user_id()
     tickets = request.json.get('tickets', [])
@@ -677,7 +616,7 @@ def save_tickets():
 
 #---TICKET STATUS---
 @app.route('/db/ticket-status', methods=['POST'])
-@require_permission('myTickets', 'Update ticket status')
+@login_required
 def ticket_status():
     uid = get_current_user_id()
     data = request.json or {}
@@ -717,12 +656,14 @@ def ticket_status():
     return jsonify({'success': True, 'ticket_id': ticket_id, 'status': status, 'updated': updated_ts})
 
 #---DELETE TICKET---
+# @app.route('/db/ticket-delete', methods=['POST'])
+# @login_required
 def ticket_delete():
     pass
 
 #---ACCEPT TICKET---
 @app.route('/db/ticket-acceptance', methods=['POST'])
-@require_permission('myTickets', 'Accept tickets')
+@login_required
 def ticket_acceptance():
     uid = get_current_user_id()
     data = request.json or {}
@@ -756,13 +697,13 @@ def ticket_acceptance():
 
     conn.commit()
 
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
     conn.close()
-    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': username})
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
 
 #---RESOLVE TICKET---
 @app.route('/db/ticket-resolution', methods=['POST'])
-@require_permission('myTickets', 'Resolve tickets')
+@login_required
 def ticket_resolution():
     uid = get_current_user_id()
     data = request.json or {}
@@ -816,7 +757,7 @@ def ticket_resolution():
 
 #---REASSIGN TICKET---
 @app.route('/db/ticket-reassign', methods=['POST'])
-@require_permission('myTickets', 'Reassign tickets')
+@login_required
 def ticket_reassign():
     uid = get_current_user_id()
     data = request.json or {}
@@ -840,7 +781,7 @@ def ticket_reassign():
         return jsonify({'error': 'Only the accepting user can reassign this ticket'}), 403
 
     reassigned_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
 
     # Clear the acceptance
     conn.execute(
@@ -869,12 +810,12 @@ def ticket_reassign():
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
-        'reassigned': reassigned_ts, 'reassigned_by': username
+        'reassigned': reassigned_ts, 'reassigned_by': email
     })
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
-@require_permission('myTickets', 'Comment tickets')
+@login_required
 def ticket_comment():
     uid = get_current_user_id()
     data = request.json or {}
@@ -907,7 +848,7 @@ def ticket_comment():
         return jsonify({'error': 'Only the accepting user or a collaborator can comment on this ticket'}), 403
 
     commented_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
 
     accepted_id = accepted['id'] if accepted else None
     conn.execute(
@@ -920,7 +861,7 @@ def ticket_comment():
     new_collaborators = []
     for username in mentions:
         mentioned_user = conn.execute(
-            'SELECT id, username FROM users WHERE username = ?', (username,)
+            'SELECT id, email FROM users WHERE email = ?', (username,)
         ).fetchone()
         if mentioned_user and mentioned_user['id'] != uid and (not accepted or mentioned_user['id'] != accepted['user_id']):
             existing = conn.execute(
@@ -934,22 +875,22 @@ def ticket_comment():
                 )
                 conn.execute(
                     'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-                    (ticket_id, uid, f'Collaborator added: {mentioned_user["username"]}', commented_ts)
+                    (ticket_id, uid, f'Collaborator added: {mentioned_user["email"]}', commented_ts)
                 )
-                new_collaborators.append(mentioned_user['username'])
+                new_collaborators.append(mentioned_user['email'])
 
     conn.commit()
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
-        'commented': commented_ts, 'comment_by': username,
+        'commented': commented_ts, 'comment_by': email,
         'comment_description': comment_desc,
         'new_collaborators': new_collaborators
     })
 
 #---FIX COMMENT---
 @app.route('/db/ticket-comment-fix', methods=['POST'])
-@require_permission('myTickets', 'Fix comment tickets')
+@login_required
 def ticket_comment_fix():
     uid = get_current_user_id()
     data = request.json or {}
@@ -982,7 +923,7 @@ def ticket_comment_fix():
         return jsonify({'error': 'Comment not found'}), 404
 
     fixed_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
 
     conn.execute(
         'UPDATE commentTickets SET isFixed = 1, fixed = ? WHERE id = ?',
@@ -998,16 +939,18 @@ def ticket_comment_fix():
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id, 'comment_id': comment_id,
-        'fixed': fixed_ts, 'fixed_by': username
+        'fixed': fixed_ts, 'fixed_by': email
     })
 
 #---REOPEN TICKET---
+# @app.route('/db/ticket-reopen', methods=['POST'])
+# @login_required
 def ticket_reopen():
     pass
 
 #---ARCHIVE TICKET---
 @app.route('/db/ticket-archive', methods=['POST'])
-@require_permission('myTickets', 'Delete tickets')
+@login_required
 def ticket_archive():
     uid = get_current_user_id()
     data = request.json or {}
@@ -1059,16 +1002,16 @@ def ticket_archive():
 
 #---LOAD TICKETS---
 @app.route('/db/load-tickets', methods=['GET'])
-@require_permission('myTickets', 'Viewable myTickets tab')
+@login_required
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
-        SELECT tickets.*, users.username AS creator_email,
+        SELECT tickets.*, users.email AS creator_email,
             resolvedTickets.resolved AS rt_resolved,
             resolvedTickets.isResolved AS rt_isResolved,
             acceptedTickets.accepted AS at_accepted,
             acceptedTickets.isAccepted AS at_isAccepted,
-            acceptors.username AS accepted_by_email,
+            acceptors.email AS accepted_by_email,
             archivedTickets.archived AS at_archived,
             archivedTickets.isArchived AS at_isArchived,
             statusTickets.status AS st_status
@@ -1081,11 +1024,11 @@ def load_tickets():
         LEFT JOIN statusTickets ON statusTickets.ticket_id = tickets.id
     ''').fetchall()
 
-    # Fetch all comments with commenter username
+    # Fetch all comments with commenter email
     comment_rows = conn.execute('''
         SELECT commentTickets.id AS comment_id, commentTickets.ticket_id, commentTickets.commented,
             commentTickets.comment_description, commentTickets.isFixed, commentTickets.fixed,
-            users.username AS comment_by
+            users.email AS comment_by
         FROM commentTickets
         JOIN users ON commentTickets.user_id = users.id
         ORDER BY commentTickets.id ASC
@@ -1108,7 +1051,7 @@ def load_tickets():
 
     activity_rows = conn.execute('''
         SELECT ticketActivity.ticket_id, ticketActivity.action,
-            ticketActivity.timestamp, users.username AS action_by
+            ticketActivity.timestamp, users.email AS action_by
         FROM ticketActivity
         JOIN users ON ticketActivity.user_id = users.id
         ORDER BY ticketActivity.id ASC
@@ -1127,7 +1070,7 @@ def load_tickets():
 
         # Fetch collaborators per ticket
         collab_rows = conn.execute('''
-            SELECT ticketCollaborators.ticket_id, users.username AS collaborator_email
+            SELECT ticketCollaborators.ticket_id, users.email AS collaborator_email
             FROM ticketCollaborators
             JOIN users ON ticketCollaborators.user_id = users.id
         ''').fetchall()
@@ -1163,7 +1106,7 @@ def load_tickets():
 
 #---TICKET STATS---
 @app.route('/db/ticket-stats', methods=['GET'])
-@require_permission('myTickets', 'Viewable myTickets tab')
+@login_required
 def ticket_stats():
     conn = get_db()
 
@@ -1209,13 +1152,13 @@ def ticket_stats():
 
     # Per-person workload (accepted tickets, not archived)
     by_person = conn.execute('''
-        SELECT u.username, COUNT(*) AS count
+        SELECT u.email, COUNT(*) AS count
         FROM acceptedTickets at2
         JOIN users u ON at2.user_id = u.id
         JOIN tickets t ON at2.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
         WHERE at2.isAccepted = 1 AND COALESCE(a.isArchived, 0) = 0
-        GROUP BY u.username
+        GROUP BY u.email
         ORDER BY count DESC
     ''').fetchall()
 
@@ -1246,199 +1189,10 @@ def ticket_stats():
     return jsonify({
         'by_status': by_status,
         'by_feature': {r['feature']: r['count'] for r in by_feature},
-        'by_person': {r['username']: r['count'] for r in by_person},
+        'by_person': {r['email']: r['count'] for r in by_person},
         'resolution': {'resolved': resolved, 'total': total},
         'aging': [{'id': r['id'], 'created': r['created'], 'status': r['status']} for r in aging]
     })
-
-#=====================
-# ADMIN ENDPOINTS
-#=====================
-
-@app.route('/admin/users', methods=['GET'])
-@require_role('admin')
-def admin_list_users():
-    conn = get_db()
-    users = conn.execute('SELECT id, username, role, must_change_password, created_at FROM users').fetchall()
-    conn.close()
-    return jsonify([dict(u) for u in users])
-
-@app.route('/admin/users/create', methods=['POST'])
-@require_role('admin')
-def admin_create_user():
-    data = request.json or {}
-    username = data.get('username', '').strip()
-    role = data.get('role', 'viewer')
-    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
-    if not username:
-        return jsonify({'error': 'Username is required.'}), 400
-    if role not in valid_roles:
-        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
-
-    conn = get_db()
-    if conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
-        conn.close()
-        return jsonify({'error': 'Username already exists.'}), 409
-
-    otp = generate_otp()
-    otp_hash = generate_password_hash(otp)
-    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
-    expiry_hours = policy['otp_expiry_hours'] if policy else 72
-    from datetime import timedelta
-    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
-
-    conn.execute(
-        'INSERT INTO users (username, otp_hash, otp_expires_at, role, must_change_password) VALUES (?, ?, ?, ?, ?)',
-        (username, otp_hash, expires_at, role, 1)
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'username': username, 'role': role, 'otp': otp, 'expires_at': expires_at}), 201
-
-@app.route('/admin/users/update-role', methods=['POST'])
-@require_role('admin')
-def admin_update_role():
-    data = request.json or {}
-    username = data.get('username', '').strip()
-    role = data.get('role', '')
-    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
-    if role not in valid_roles:
-        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
-    conn = get_db()
-    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'error': 'User not found.'}), 404
-    conn.execute('UPDATE users SET role = ? WHERE username = ?', (role, username))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'username': username, 'role': role})
-
-@app.route('/admin/users/reset-otp', methods=['POST'])
-@require_role('admin')
-def admin_reset_otp():
-    data = request.json or {}
-    username = data.get('username', '').strip()
-    conn = get_db()
-    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'error': 'User not found.'}), 404
-
-    otp = generate_otp()
-    otp_hash = generate_password_hash(otp)
-    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
-    expiry_hours = policy['otp_expiry_hours'] if policy else 72
-    from datetime import timedelta
-    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
-
-    conn.execute(
-        'UPDATE users SET otp_hash = ?, otp_expires_at = ?, must_change_password = 1, password_hash = NULL WHERE username = ?',
-        (otp_hash, expires_at, username)
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'username': username, 'otp': otp, 'expires_at': expires_at})
-
-@app.route('/admin/users/delete', methods=['POST'])
-@require_role('admin')
-def admin_delete_user():
-    data = request.json or {}
-    username = data.get('username', '').strip()
-    conn = get_db()
-    user = conn.execute('SELECT id, role FROM users WHERE username = ?', (username,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'error': 'User not found.'}), 404
-    if user['role'] == 'admin':
-        count = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0]
-        if count <= 1:
-            conn.close()
-            return jsonify({'error': 'Cannot delete the only admin account.'}), 400
-    conn.execute('DELETE FROM users WHERE username = ?', (username,))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'username': username})
-
-@app.route('/admin/policies', methods=['GET'])
-@require_role('admin')
-def admin_get_policies():
-    conn = get_db()
-    policy = conn.execute('SELECT * FROM org_policies LIMIT 1').fetchone()
-    conn.close()
-    return jsonify(dict(policy) if policy else {})
-
-@app.route('/admin/policies', methods=['POST'])
-@require_role('admin')
-def admin_update_policies():
-    data = request.json or {}
-    uid = get_current_user_id()
-    conn = get_db()
-    conn.execute('''
-        UPDATE org_policies SET
-            asset_sharing_mode = COALESCE(?, asset_sharing_mode),
-            sod_enforcement = COALESCE(?, sod_enforcement),
-            otp_expiry_hours = COALESCE(?, otp_expiry_hours),
-            updated_at = ?,
-            updated_by = ?
-        WHERE id = 1
-    ''', (
-        data.get('asset_sharing_mode'),
-        data.get('sod_enforcement'),
-        data.get('otp_expiry_hours'),
-        datetime.now().isoformat(),
-        uid
-    ))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True})
-
-@app.route('/admin/permissions', methods=['GET'])
-@require_role('admin')
-def get_permissions():
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT category, permission, role, access_level FROM role_permissions ORDER BY id'
-    ).fetchall()
-    conn.close()
-    result = {}
-    for r in rows:
-        cat = r['category']
-        perm = r['permission']
-        role = r['role']
-        if cat not in result:
-            result[cat] = {}
-        if perm not in result[cat]:
-            result[cat][perm] = {}
-        result[cat][perm][role] = r['access_level']
-    return jsonify(result)
-
-@app.route('/admin/permissions', methods=['POST'])
-@require_role('admin')
-def update_permission():
-    data = request.get_json()
-    category = data.get('category')
-    permission = data.get('permission')
-    role = data.get('role')
-    access_level = data.get('access_level')
-
-    valid_levels = ['blocked', 'read only', 'read/write', 'managerial approval', 'admin approval']
-    if access_level not in valid_levels:
-        return jsonify({'error': 'Invalid access level'}), 400
-
-    conn = get_db()
-    conn.execute(
-        '''INSERT INTO role_permissions (category, permission, role, access_level, updated_at, updated_by)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-            ON CONFLICT(category, permission, role)
-            DO UPDATE SET access_level = excluded.access_level,
-                        updated_at = excluded.updated_at,
-                        updated_by = excluded.updated_by''',
-        (category, permission, role, access_level, session.get('user_id'))
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True})
 
 #===========
 # MAIN
@@ -1450,3 +1204,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
