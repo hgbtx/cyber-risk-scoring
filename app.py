@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__)
 
-import time, requests, os, json, re
+import time, requests, os, json, re, secrets, string
 from datetime import datetime
 from dotenv import load_dotenv
 from db import get_db, init_db
@@ -60,45 +60,65 @@ def get_current_user_id():
     return session.get('user_id')
 
 #---AUTHENTICATION ENDPOINTS---
-@app.route('/auth/register', methods=['POST'])
-def register():
+@app.route('/auth/verify-otp', methods=['POST'])
+def verify_otp():
     data = request.json or {}
-    email = data.get('email', '').strip().lower()
+    username = data.get('username', '').strip()
+    otp = data.get('otp', '')
+    if not username or not otp:
+        return jsonify({'error': 'Username and one-time password are required.'}), 400
+    conn = get_db()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    if not user or not user['otp_hash']:
+        return jsonify({'error': 'Invalid username or one-time password.'}), 401
+    if not check_password_hash(user['otp_hash'], otp):
+        return jsonify({'error': 'Invalid username or one-time password.'}), 401
+    if user['otp_expires_at']:
+        expiry = datetime.fromisoformat(user['otp_expires_at'])
+        if datetime.now() > expiry:
+            return jsonify({'error': 'One-time password has expired. Contact your administrator.'}), 401
+    session['user_id'] = user['id']
+    session['username'] = user['username']
+    session['role'] = user['role']
+    return jsonify({'success': True, 'must_change_password': bool(user['must_change_password'])})
+
+@app.route('/auth/set-password', methods=['POST'])
+@login_required
+def set_password():
+    data = request.json or {}
     password = data.get('password', '')
-    if not email or not password:
-        return jsonify({'error': 'Email and password are required.'}), 400
     if len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters.'}), 400
-    conn = get_db()
-    if conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone():
-        conn.close()
-        return jsonify({'error': 'An account with that email already exists.'}), 409
+    uid = get_current_user_id()
     pw_hash = generate_password_hash(password)
-    cursor = conn.execute('INSERT INTO users (email, password_hash) VALUES (?, ?)', (email, pw_hash))
+    conn = get_db()
+    conn.execute(
+        'UPDATE users SET password_hash = ?, otp_hash = NULL, otp_expires_at = NULL, must_change_password = 0 WHERE id = ?',
+        (pw_hash, uid)
+    )
     conn.commit()
-    user_id = cursor.lastrowid
     conn.close()
-    session['user_id'] = user_id
-    session['email'] = email
-    session['role'] = 'analyst'
-    return jsonify({'success': True, 'user': {'id': user_id, 'email': email, 'role': 'analyst'}}), 201
+    return jsonify({'success': True})
 
 @app.route('/auth/login', methods=['POST'])
 def login():
     data = request.json or {}
-    email = data.get('email', '').strip().lower()
+    username = data.get('username', '').strip()
     password = data.get('password', '')
-    if not email or not password:
-        return jsonify({'error': 'Email and password are required.'}), 400
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required.'}), 400
     conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
     conn.close()
-    if not user or not check_password_hash(user['password_hash'], password):
-        return jsonify({'error': 'Invalid email or password.'}), 401
+    if not user or not user['password_hash'] or not check_password_hash(user['password_hash'], password):
+        return jsonify({'error': 'Invalid username or password.'}), 401
+    if user['must_change_password']:
+        return jsonify({'error': 'Please use the New User login to set your password.'}), 403
     session['user_id'] = user['id']
-    session['email'] = user['email']
+    session['username'] = user['username']
     session['role'] = user['role']
-    return jsonify({'success': True, 'user': {'id': user['id'], 'email': user['email'], 'role': user['role']}})
+    return jsonify({'success': True, 'user': {'id': user['id'], 'username': user['username'], 'role': user['role']}})
 
 @app.route('/auth/logout', methods=['POST'])
 def logout():
@@ -111,7 +131,7 @@ def auth_me():
     if not uid:
         return jsonify({'authenticated': False}), 401
     conn = get_db()
-    user = conn.execute('SELECT id, email, role FROM users WHERE id = ?', (uid,)).fetchone()
+    user = conn.execute('SELECT id, username, role FROM users WHERE id = ?', (uid,)).fetchone()
     conn.close()
     if not user:
         return jsonify({'authenticated': False}), 401
@@ -697,9 +717,9 @@ def ticket_acceptance():
 
     conn.commit()
 
-    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
     conn.close()
-    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': email})
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'accepted': accepted_ts, 'accepted_by': username})
 
 #---RESOLVE TICKET---
 @app.route('/db/ticket-resolution', methods=['POST'])
@@ -781,7 +801,7 @@ def ticket_reassign():
         return jsonify({'error': 'Only the accepting user can reassign this ticket'}), 403
 
     reassigned_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
 
     # Clear the acceptance
     conn.execute(
@@ -810,7 +830,7 @@ def ticket_reassign():
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
-        'reassigned': reassigned_ts, 'reassigned_by': email
+        'reassigned': reassigned_ts, 'reassigned_by': username
     })
 
 #---COMMENT TICKET---
@@ -848,7 +868,7 @@ def ticket_comment():
         return jsonify({'error': 'Only the accepting user or a collaborator can comment on this ticket'}), 403
 
     commented_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
 
     accepted_id = accepted['id'] if accepted else None
     conn.execute(
@@ -861,7 +881,7 @@ def ticket_comment():
     new_collaborators = []
     for username in mentions:
         mentioned_user = conn.execute(
-            'SELECT id, email FROM users WHERE email = ?', (username,)
+            'SELECT id, username FROM users WHERE username = ?', (username,)
         ).fetchone()
         if mentioned_user and mentioned_user['id'] != uid and (not accepted or mentioned_user['id'] != accepted['user_id']):
             existing = conn.execute(
@@ -875,15 +895,15 @@ def ticket_comment():
                 )
                 conn.execute(
                     'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-                    (ticket_id, uid, f'Collaborator added: {mentioned_user["email"]}', commented_ts)
+                    (ticket_id, uid, f'Collaborator added: {mentioned_user["username"]}', commented_ts)
                 )
-                new_collaborators.append(mentioned_user['email'])
+                new_collaborators.append(mentioned_user['username'])
 
     conn.commit()
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
-        'commented': commented_ts, 'comment_by': email,
+        'commented': commented_ts, 'comment_by': username,
         'comment_description': comment_desc,
         'new_collaborators': new_collaborators
     })
@@ -923,7 +943,7 @@ def ticket_comment_fix():
         return jsonify({'error': 'Comment not found'}), 404
 
     fixed_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    email = conn.execute('SELECT email FROM users WHERE id = ?', (uid,)).fetchone()['email']
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
 
     conn.execute(
         'UPDATE commentTickets SET isFixed = 1, fixed = ? WHERE id = ?',
@@ -939,7 +959,7 @@ def ticket_comment_fix():
     conn.close()
     return jsonify({
         'success': True, 'ticket_id': ticket_id, 'comment_id': comment_id,
-        'fixed': fixed_ts, 'fixed_by': email
+        'fixed': fixed_ts, 'fixed_by': username
     })
 
 #---REOPEN TICKET---
@@ -1006,12 +1026,12 @@ def ticket_archive():
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
-        SELECT tickets.*, users.email AS creator_email,
+        SELECT tickets.*, users.username AS creator_email,
             resolvedTickets.resolved AS rt_resolved,
             resolvedTickets.isResolved AS rt_isResolved,
             acceptedTickets.accepted AS at_accepted,
             acceptedTickets.isAccepted AS at_isAccepted,
-            acceptors.email AS accepted_by_email,
+            acceptors.username AS accepted_by_email,
             archivedTickets.archived AS at_archived,
             archivedTickets.isArchived AS at_isArchived,
             statusTickets.status AS st_status
@@ -1024,11 +1044,11 @@ def load_tickets():
         LEFT JOIN statusTickets ON statusTickets.ticket_id = tickets.id
     ''').fetchall()
 
-    # Fetch all comments with commenter email
+    # Fetch all comments with commenter username
     comment_rows = conn.execute('''
         SELECT commentTickets.id AS comment_id, commentTickets.ticket_id, commentTickets.commented,
             commentTickets.comment_description, commentTickets.isFixed, commentTickets.fixed,
-            users.email AS comment_by
+            users.username AS comment_by
         FROM commentTickets
         JOIN users ON commentTickets.user_id = users.id
         ORDER BY commentTickets.id ASC
@@ -1051,7 +1071,7 @@ def load_tickets():
 
     activity_rows = conn.execute('''
         SELECT ticketActivity.ticket_id, ticketActivity.action,
-            ticketActivity.timestamp, users.email AS action_by
+            ticketActivity.timestamp, users.username AS action_by
         FROM ticketActivity
         JOIN users ON ticketActivity.user_id = users.id
         ORDER BY ticketActivity.id ASC
@@ -1070,7 +1090,7 @@ def load_tickets():
 
         # Fetch collaborators per ticket
         collab_rows = conn.execute('''
-            SELECT ticketCollaborators.ticket_id, users.email AS collaborator_email
+            SELECT ticketCollaborators.ticket_id, users.username AS collaborator_email
             FROM ticketCollaborators
             JOIN users ON ticketCollaborators.user_id = users.id
         ''').fetchall()
@@ -1152,13 +1172,13 @@ def ticket_stats():
 
     # Per-person workload (accepted tickets, not archived)
     by_person = conn.execute('''
-        SELECT u.email, COUNT(*) AS count
+        SELECT u.username, COUNT(*) AS count
         FROM acceptedTickets at2
         JOIN users u ON at2.user_id = u.id
         JOIN tickets t ON at2.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
         WHERE at2.isAccepted = 1 AND COALESCE(a.isArchived, 0) = 0
-        GROUP BY u.email
+        GROUP BY u.username
         ORDER BY count DESC
     ''').fetchall()
 
@@ -1189,7 +1209,7 @@ def ticket_stats():
     return jsonify({
         'by_status': by_status,
         'by_feature': {r['feature']: r['count'] for r in by_feature},
-        'by_person': {r['email']: r['count'] for r in by_person},
+        'by_person': {r['username']: r['count'] for r in by_person},
         'resolution': {'resolved': resolved, 'total': total},
         'aging': [{'id': r['id'], 'created': r['created'], 'status': r['status']} for r in aging]
     })

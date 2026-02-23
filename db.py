@@ -12,10 +12,12 @@ def init_db():
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'analyst',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            role TEXT NOT NULL DEFAULT 'viewer',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
         );
 
         CREATE TABLE IF NOT EXISTS assets (
@@ -110,7 +112,16 @@ def init_db():
             FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
-        
+
+        CREATE TABLE IF NOT EXISTS deletedTickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            deleted TEXT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS ticketActivity (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id INTEGER NOT NULL,
@@ -143,6 +154,18 @@ def init_db():
             UNIQUE(ticket_id, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            level INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
     ''')
     conn.commit()
 
@@ -155,6 +178,16 @@ def init_db():
         conn.execute('ALTER TABLE commentTickets ADD COLUMN fixed TEXT')
     except:
         pass
+    conn.commit()
+
+    # Seed default organization if empty
+    if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
+        conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
+
+    # Seed default organization if empty
+    if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
+        conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
+    
     conn.commit()
 
     conn.close()

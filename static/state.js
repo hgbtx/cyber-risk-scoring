@@ -26,6 +26,7 @@ let _publishedDateSliderDates = [];
 let cpeDetailSortKey = 'title';
 let cpeDetailSortDir = 'asc';
 let cveEnteredFromDetailView = false;
+let currentUser = null;
 
 // =====================
 // DOM REFERENCES

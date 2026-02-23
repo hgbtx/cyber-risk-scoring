@@ -1,5 +1,3 @@
-let currentUser = null;
-
 async function checkAuth() {
     try {
         const res = await fetch('/auth/me');
@@ -14,6 +12,7 @@ function showAuthOverlay() {
     document.getElementById('authOverlay').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
     document.getElementById('userBar').style.display = 'none';
+    showLoginForm();
 }
 
 function showApp() {
@@ -21,32 +20,42 @@ function showApp() {
     document.getElementById('appContainer').style.display = 'flex';
     const bar = document.getElementById('userBar');
     bar.style.display = 'flex';
-    document.getElementById('userEmail').textContent = currentUser.email;
+    document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
     loadPersistedData();
 }
 
 function showLoginForm() {
     document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('newUserForm').style.display = 'none';
+    document.getElementById('setPasswordForm').style.display = 'none';
     document.getElementById('authError').textContent = '';
 }
-function showRegisterForm() {
+
+function showNewUserForm() {
     document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('newUserForm').style.display = 'block';
+    document.getElementById('setPasswordForm').style.display = 'none';
+    document.getElementById('authError').textContent = '';
+}
+
+function showSetPasswordForm() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('newUserForm').style.display = 'none';
+    document.getElementById('setPasswordForm').style.display = 'block';
     document.getElementById('authError').textContent = '';
 }
 
 async function handleLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
+    const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     const err = document.getElementById('authError');
     err.textContent = '';
-    if (!email || !password) { err.textContent = 'Please enter email and password.'; return; }
+    if (!username || !password) { err.textContent = 'Please enter username and password.'; return; }
     try {
         const res = await fetch('/auth/login', {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ username, password })
         });
         const data = await res.json();
         if (data.success) { currentUser = data.user; showApp(); }
@@ -54,23 +63,40 @@ async function handleLogin() {
     } catch (e) { err.textContent = 'Connection error.'; }
 }
 
-async function handleRegister() {
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirm = document.getElementById('registerConfirm').value;
+async function handleOtpLogin() {
+    const username = document.getElementById('otpUsername').value.trim();
+    const otp = document.getElementById('otpPassword').value.trim();
     const err = document.getElementById('authError');
     err.textContent = '';
-    if (!email || !password) { err.textContent = 'Email and password required.'; return; }
+    if (!username || !otp) { err.textContent = 'Please enter username and one-time password.'; return; }
+    try {
+        const res = await fetch('/auth/verify-otp', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ username, otp })
+        });
+        const data = await res.json();
+        if (data.success && data.must_change_password) { showSetPasswordForm(); }
+        else if (data.success) { checkAuth(); }
+        else { err.textContent = data.error || 'Verification failed.'; }
+    } catch (e) { err.textContent = 'Connection error.'; }
+}
+
+async function handleSetPassword() {
+    const password = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmNewPassword').value;
+    const err = document.getElementById('authError');
+    err.textContent = '';
+    if (!password) { err.textContent = 'Password is required.'; return; }
     if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
     if (password.length < 8) { err.textContent = 'Password must be 8+ characters.'; return; }
     try {
-        const res = await fetch('/auth/register', {
+        const res = await fetch('/auth/set-password', {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ password })
         });
         const data = await res.json();
-        if (data.success) { currentUser = data.user; showApp(); }
-        else { err.textContent = data.error || 'Registration failed.'; }
+        if (data.success) { checkAuth(); }
+        else { err.textContent = data.error || 'Failed to set password.'; }
     } catch (e) { err.textContent = 'Connection error.'; }
 }
 
@@ -91,6 +117,7 @@ async function handleLogout() {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleLogin(); });
-    document.getElementById('registerConfirm')?.addEventListener('keypress', e => { if (e.key==='Enter') handleRegister(); });
+    document.getElementById('otpPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleOtpLogin(); });
+    document.getElementById('confirmNewPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleSetPassword(); });
     checkAuth();
 });
