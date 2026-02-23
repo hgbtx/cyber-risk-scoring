@@ -482,6 +482,31 @@
                             <tbody id="adminUsersBody"></tbody>
                         </table>
                     </div>
+
+                    <!-- Role Permissions Section -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>Role Permissions</h3>
+                        <div style="overflow-x:auto;">
+                            <table class="permissions-table" id="permissionsTable">
+                                <thead>
+                                    <tr>
+                                        <th class="perm-label-col">Permission</th>
+                                        <th>Viewer</th>
+                                        <th>Tier 1 Analyst</th>
+                                        <th>Tier 2 Analyst</th>
+                                        <th>Manager</th>
+                                        <th>Admin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissionsBody"></tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top:15px;display:flex;align-items:center;gap:12px;">
+                            <button onclick="savePermissions()" class="admin-save-btn">Save Permissions</button>
+                            <button onclick="resetPermissions()" style="padding:8px 20px;font-size:14px;background:#ddd;color:#57534E;border:none;border-radius:4px;cursor:pointer;">Reset to Default</button>
+                            <span id="permissionsStatus" style="font-size:0.85em;color:#50b88e;"></span>
+                        </div>
+                    </div>
                 </div>
 
             </div>

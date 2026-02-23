@@ -953,3 +953,102 @@ height: auto;
 .admin-users-table tbody tr:hover {
     background-color: #f5f0e8;
 }
+
+/* Permissions Table */
+.permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+}
+
+.permissions-table thead th {
+    background: #ededed;
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 2px solid #ccc;
+    font-weight: 600;
+    color: #444;
+    white-space: nowrap;
+}
+
+.permissions-table thead th.perm-label-col {
+    text-align: left;
+    min-width: 220px;
+}
+
+.permissions-table tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    text-align: center;
+}
+
+.permissions-table tbody td.perm-label {
+    text-align: left;
+    color: #57534E;
+    padding-left: 20px;
+}
+
+.permissions-table tbody tr:hover {
+    background-color: #f5f0e8;
+}
+
+.perm-category-row td {
+    background: #f9f6f1;
+    font-weight: 700;
+    color: #333;
+    padding: 10px 12px !important;
+    text-align: left !important;
+    border-bottom: 2px solid #d5bf9f !important;
+}
+
+.perm-category-row:hover {
+    background-color: #f9f6f1 !important;
+}
+
+/* Toggle Switch */
+.perm-toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+}
+
+.perm-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.perm-toggle .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    border-radius: 20px;
+    transition: 0.25s;
+}
+
+.perm-toggle .slider::before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.25s;
+}
+
+.perm-toggle input:checked + .slider {
+    background-color: #50b88e;
+}
+
+.perm-toggle input:checked + .slider::before {
+    transform: translateX(16px);
+}
+
+.perm-toggle input:disabled + .slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

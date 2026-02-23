@@ -14,6 +14,7 @@ document.querySelector('[data-tab="admin"]')?.addEventListener('click', () => {
     if (hasMinRole('admin')) {
         loadOrgPolicies();
         loadAdminUsers();
+        loadPermissions();
     }
 });
 
@@ -156,4 +157,145 @@ async function adminDeleteUser(username) {
         if (data.success) { loadAdminUsers(); }
         else { alert(data.error || 'Failed to delete user.'); }
     } catch (e) { alert('Connection error.'); }
+}
+
+// =====================
+// ROLE PERMISSIONS
+// =====================
+
+const DEFAULT_PERMISSIONS = {
+    Search: {
+        'view Search tab':               { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'perform searches':              { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'drag and drop to Assets folder':{ viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'add assets to Asset Directory': { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 }
+    },
+    'Asset Directory': {
+        'view Asset Directory tab': { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'save assets':              { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'archive assets':           { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'delete assets':            { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:0, admin:1 },
+        'download CSV':             { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'download JSON':            { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 }
+    },
+    myCharts: {
+        'view myCharts tab':                  { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'drag and drop charts to dashboard':  { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'download PNG':                       { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'download PDF':                       { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 }
+    },
+    myTickets: {
+        'view myTickets tab':   { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'create tickets':       { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'delete tickets':       { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'resolve tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'reassign tickets':     { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'reopen tickets':       { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':1, manager:1, admin:1 },
+        'accept tickets':       { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'update ticket status': { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'fix comment tickets':  { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'download ticket log':  { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 }
+    }
+};
+
+const PERM_ROLES = ['viewer', 'tier 1 analyst', 'tier 2 analyst', 'manager', 'admin'];
+
+let currentPermissions = null;
+
+function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function renderPermissionsTable(perms) {
+    const tbody = document.getElementById('permissionsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    for (const [category, actions] of Object.entries(perms)) {
+        // Category header row
+        const catRow = document.createElement('tr');
+        catRow.className = 'perm-category-row';
+        catRow.innerHTML = `<td colspan="6">${category}</td>`;
+        tbody.appendChild(catRow);
+
+        for (const [action, roles] of Object.entries(actions)) {
+            const tr = document.createElement('tr');
+            let cells = `<td class="perm-label">${action}</td>`;
+            PERM_ROLES.forEach(role => {
+                const checked = roles[role] ? 'checked' : '';
+                const isAdmin = role === 'admin';
+                const disabled = isAdmin ? 'disabled' : '';
+                cells += `
+                    <td>
+                        <label class="perm-toggle">
+                            <input type="checkbox" ${checked} ${disabled}
+                                data-category="${category}"
+                                data-action="${action}"
+                                data-role="${role}"
+                                onchange="onPermToggle(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </td>`;
+            });
+            tr.innerHTML = cells;
+            tbody.appendChild(tr);
+        }
+    }
+}
+
+function onPermToggle(el) {
+    const cat = el.dataset.category;
+    const action = el.dataset.action;
+    const role = el.dataset.role;
+    if (currentPermissions[cat] && currentPermissions[cat][action]) {
+        currentPermissions[cat][action][role] = el.checked ? 1 : 0;
+    }
+}
+
+async function loadPermissions() {
+    try {
+        const res = await fetch('/admin/permissions');
+        const data = await res.json();
+        if (data.permissions) {
+            currentPermissions = data.permissions;
+        } else {
+            currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
+        }
+    } catch (e) {
+        currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
+    }
+    renderPermissionsTable(currentPermissions);
+}
+
+async function savePermissions() {
+    const status = document.getElementById('permissionsStatus');
+    status.textContent = 'Saving...';
+    status.style.color = '#57534E';
+    try {
+        const res = await fetch('/admin/permissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ permissions: currentPermissions })
+        });
+        const data = await res.json();
+        if (data.success) {
+            status.textContent = 'Saved';
+            status.style.color = '#50b88e';
+        } else {
+            status.textContent = data.error || 'Failed';
+            status.style.color = '#c01e19';
+        }
+    } catch (e) {
+        status.textContent = 'Connection error';
+        status.style.color = '#c01e19';
+    }
+    setTimeout(() => status.textContent = '', 3000);
+}
+
+function resetPermissions() {
+    if (!confirm('Reset all permissions to defaults?')) return;
+    currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
+    renderPermissionsTable(currentPermissions);
+    const status = document.getElementById('permissionsStatus');
+    status.textContent = 'Reset to defaults (unsaved)';
+    status.style.color = '#e67e22';
+    setTimeout(() => status.textContent = '', 3000);
 }
