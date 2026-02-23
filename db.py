@@ -177,7 +177,8 @@ def init_db():
             updated_by INTEGER,
             FOREIGN KEY (org_id) REFERENCES organizations(id),
             FOREIGN KEY (updated_by) REFERENCES users(id)
-        );                       
+        );
+
 
     ''')
     conn.commit()

@@ -95,18 +95,29 @@ function renderManageAssetsList(showArchived) {
         btn.addEventListener('click', () => {
             const cpe = btn.dataset.cpe;
             if (!confirm(`Delete "${cveDataStore[cpe]?.title || cpe}" and all its CVE data?`)) return;
-            // Remove from left panel
-            const item = selectedItems.querySelector(`.selected-item[data-cpe-name="${cpe}"]`);
-            if (item) item.remove();
-            delete cveDataStore[cpe];
-            delete cpeDataStore[cpe];
-            archivedAssets.delete(cpe);
-            refreshAfterManage();
-            saveAssets();
-            renderManageAssetsList(showArchived);
-            if (!selectedItems.querySelectorAll('.selected-item').length && placeholder) {
-                placeholder.style.display = 'block';
-            }
+            fetch('/db/delete-asset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpeName: cpe })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const item = selectedItems.querySelector(`.selected-item[data-cpe-name="${cpe}"]`);
+                    if (item) item.remove();
+                    delete cveDataStore[cpe];
+                    delete cpeDataStore[cpe];
+                    archivedAssets.delete(cpe);
+                    refreshAfterManage();
+                    renderManageAssetsList(showArchived);
+                    if (!selectedItems.querySelectorAll('.selected-item').length && placeholder) {
+                        placeholder.style.display = 'block';
+                    }
+                } else {
+                    alert(data.error || 'Failed to delete asset');
+                }
+            })
+            .catch(e => console.error('Delete asset error:', e));
         });
     });
 }

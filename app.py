@@ -568,6 +568,49 @@ def archive_asset():
     conn.close()
     return jsonify({'success': True, 'cpeName': cpe_name, 'isArchived': is_archived, 'archived': archived_ts})
 
+#---DELETE ASSETS---
+@app.route('/db/deleted-assets', methods=['POST'])
+@require_role('admin')
+def delete_asset():
+    uid = get_current_user_id()
+    data = request.json or {}
+    cpe_name = data.get('cpeName')
+
+    if not cpe_name:
+        return jsonify({'error': 'cpeName is required'}), 400
+
+    conn = get_db()
+
+    # Role check: only admin can delete assets
+    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 403
+
+    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions']:
+        policy = json.loads(perms['permissions'])
+        allowed = policy.get('myTickets', {}).get('delete assets', {}).get(user['role'], 0)
+    else:
+        # Fall back to defaults if no saved permissions
+        allowed = 0
+
+    if not allowed:
+        conn.close()
+        return jsonify({'error': 'Your role does not have permission to delete assets'}), 403
+
+    asset = conn.execute('SELECT id FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
+    if not asset:
+        conn.close()
+        return jsonify({'error': 'Asset not found'}), 404
+
+    conn.execute('DELETE FROM archivedAssets WHERE asset_id = ? AND user_id = ?', (asset['id'], uid))
+    conn.execute('DELETE FROM assets WHERE id = ?', (asset['id'],))
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'cpeName': cpe_name})
+
 #---LOAD ASSETS---
 @app.route('/db/load-assets', methods=['GET'])
 @login_required
@@ -680,10 +723,61 @@ def ticket_status():
     return jsonify({'success': True, 'ticket_id': ticket_id, 'status': status, 'updated': updated_ts})
 
 #---DELETE TICKET---
-# @app.route('/db/ticket-delete', methods=['POST'])
-# @login_required
+@app.route('/db/ticket-delete', methods=['POST'])
+@require_role('admin')
 def ticket_delete():
-    pass
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Role check
+    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 403
+
+    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions']:
+        policy = json.loads(perms['permissions'])
+        allowed = policy.get('myTickets', {}).get('delete tickets', {}).get(user['role'], 0)
+    else:
+        # Fall back to defaults if no saved permissions
+        allowed = 0
+
+    if not allowed:
+        conn.close()
+        return jsonify({'error': 'Your role does not have permission to delete tickets'}), 403
+
+    deleted_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+
+    # Log the deletion as activity before removing
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'Deleted', deleted_ts)
+    )
+
+    # Delete related records
+    conn.execute('DELETE FROM ticketCollaborators WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM commentTickets WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM acceptedTickets WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM resolvedTickets WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM archivedTickets WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM ticketStatus WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM tickets WHERE id = ?', (ticket_id,))
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'ticket_id': ticket_id, 'deleted_by': username, 'deleted': deleted_ts})
 
 #---ACCEPT TICKET---
 @app.route('/db/ticket-acceptance', methods=['POST'])
@@ -967,10 +1061,67 @@ def ticket_comment_fix():
     })
 
 #---REOPEN TICKET---
-# @app.route('/db/ticket-reopen', methods=['POST'])
-# @login_required
+@app.route('/db/ticket-reopen', methods=['POST'])
+@login_required
 def ticket_reopen():
-    pass
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Role check
+    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 403
+
+    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions']:
+        policy = json.loads(perms['permissions'])
+        allowed = policy.get('myTickets', {}).get('reopen tickets', {}).get(user['role'], 0)
+    else:
+        # Fall back to defaults if no saved permissions
+        allowed = 0
+
+    if not allowed:
+        conn.close()
+        return jsonify({'error': 'Your role does not have permission to reopen tickets'}), 403
+
+    reopened_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+
+    # Clear resolution
+    conn.execute(
+        'UPDATE resolvedTickets SET isResolved = 0, resolved = NULL WHERE ticket_id = ?',
+        (ticket_id,)
+    )
+
+    # Log activity
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'Reopened', reopened_ts)
+    )
+
+    # Reset status to In Progress
+    conn.execute(
+        'UPDATE ticketStatus SET status = ? WHERE ticket_id = ?',
+        ('In Progress', ticket_id)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'success': True, 'ticket_id': ticket_id,
+        'reopened': reopened_ts, 'reopened_by': username
+    })
 
 #---ARCHIVE TICKET---
 @app.route('/db/ticket-archive', methods=['POST'])

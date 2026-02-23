@@ -417,10 +417,10 @@ function resolveTicket(id) {
 
 // REOPEN TICKET
 function reopenTicket(id) {
-    fetch('/db/ticket-resolution', {
+    fetch('/db/ticket-reopen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticket_id: id, isResolved: 0 })
+        body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
     .then(data => {
@@ -433,8 +433,8 @@ function reopenTicket(id) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Reopened',
-                    action_by: currentUser?.email,
-                    timestamp: new Date().toLocaleString()
+                    action_by: data.reopened_by,
+                    timestamp: data.reopened
                 });
             }
             statusTicket(id, 'In Progress');
@@ -508,9 +508,22 @@ function restoreTicket(id) {
 
 // DELETE TICKETS
 function deleteTicket(id) {
-    tickets = tickets.filter(t => t.id !== id);
-    saveTickets();
-    renderTickets();
+    if (!confirm('Delete this ticket? This cannot be undone.')) return;
+    fetch('/db/delete-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            tickets = tickets.filter(t => t.id !== id);
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to delete ticket');
+        }
+    })
+    .catch(e => console.error('Delete ticket error:', e));
 }
 
 // Load persisted tickets on startup
