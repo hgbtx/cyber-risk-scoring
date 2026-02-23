@@ -47,6 +47,13 @@ const chartFsBtn = document.getElementById('chartFullscreenToggle');
 // Theoretical max: KEV(1000) + EPSS(500) + Age(100) + CVSS(50) + AV(25) + Priv(20) + UI(15) + AC(10) + CIA(24) = 1744
 const PRIORITY_SCORE_MAX = 1744;
 const cveCounts = document.getElementById('cveCounts');
+const ROLE_LEVELS = {
+    'viewer': 1,
+    'tier 1 analyst': 2,
+    'tier 2 analyst': 3,
+    'manager': 4,
+    'admin': 5
+};
 
 // =====================
 // HELPERS HELPERS
@@ -138,6 +145,11 @@ async function loadPersistedData() {
             initPublishedDateSlider();
         }
     } catch (e) { console.error('Failed to load assets:', e); }
+}
+
+function hasMinRole(minRole) {
+    if (!currentUser) return false;
+    return (ROLE_LEVELS[currentUser.role] || 0) >= (ROLE_LEVELS[minRole] || 0);
 }
 
 // RISK FORMULA HELPER

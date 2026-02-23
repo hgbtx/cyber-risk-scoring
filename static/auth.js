@@ -23,6 +23,8 @@ function showApp() {
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
     loadPersistedData();
+    const adminTab = document.querySelector('[data-tab="admin"]');
+    if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
     if (hasMinRole('admin')) {
         loadOrgPolicies();
         loadAdminUsers();
