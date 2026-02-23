@@ -1251,7 +1251,7 @@ def admin_create_user():
     otp_hash = generate_password_hash(otp)
     policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
     expiry_hours = policy['otp_expiry_hours'] if policy else 72
-    expires_at = (datetime.now() + datetime.__class__(hours=expiry_hours)).isoformat()
+    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
 
     conn.execute(
         'INSERT INTO users (username, otp_hash, otp_expires_at, role, must_change_password) VALUES (?, ?, ?, ?, ?)',
