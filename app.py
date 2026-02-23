@@ -552,16 +552,16 @@ def archive_asset():
     if is_archived:
         archived_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
 
-    existing = conn.execute('SELECT id FROM archivedAssets WHERE asset_id = ? AND user_id = ?', (asset['id'], uid)).fetchone()
+    existing = conn.execute('SELECT id FROM archivedAssets WHERE cpeName = ? AND user_id = ?', (cpe_name, uid)).fetchone()
     if existing:
         conn.execute(
-            'UPDATE archivedAssets SET archived = ?, isArchived = ? WHERE asset_id = ? AND user_id = ?',
-            (archived_ts, int(is_archived), asset['id'], uid)
+            'UPDATE archivedAssets SET archived = ?, isArchived = ? WHERE cpeName = ? AND user_id = ?',
+            (archived_ts, int(is_archived), cpe_name, uid)
         )
     else:
         conn.execute(
-            'INSERT INTO archivedAssets (asset_id, user_id, archived, isArchived) VALUES (?, ?, ?, ?)',
-            (asset['id'], uid, archived_ts, int(is_archived))
+            'INSERT INTO archivedAssets (cpeName, user_id, archived, isArchived) VALUES (?, ?, ?, ?)',
+            (cpe_name, uid, archived_ts, int(is_archived))
         )
 
     conn.commit()
@@ -604,8 +604,8 @@ def delete_asset():
         conn.close()
         return jsonify({'error': 'Asset not found'}), 404
 
-    conn.execute('DELETE FROM archivedAssets WHERE asset_id = ? AND user_id = ?', (asset['id'], uid))
-    conn.execute('DELETE FROM assets WHERE id = ?', (asset['id'],))
+    conn.execute('DELETE FROM archivedAssets WHERE cpeName = ? AND user_id = ?', (cpe_name, uid))
+    conn.execute('DELETE FROM assets WHERE cpeName = ?', (cpe_name,))
 
     conn.commit()
     conn.close()
