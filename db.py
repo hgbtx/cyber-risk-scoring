@@ -193,13 +193,20 @@ def init_db():
         pass
     conn.commit()
 
-    # Seed default organization if empty
-    if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
-        conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
+    # Seed roles if empty
+    if conn.execute('SELECT COUNT(*) FROM roles').fetchone()[0] == 0:
+        conn.executemany(
+            'INSERT INTO roles (name, level) VALUES (?, ?)',
+            [('viewer', 1), ('tier 1 analyst', 2), ('tier 2 analyst', 3), ('manager', 4), ('admin', 5)]
+        )
 
     # Seed default organization if empty
     if conn.execute('SELECT COUNT(*) FROM organizations').fetchone()[0] == 0:
         conn.execute("INSERT INTO organizations (name) VALUES (?)", ('Default',))
+
+    # Seed default org_policies if empty
+    if conn.execute('SELECT COUNT(*) FROM org_policies').fetchone()[0] == 0:
+        conn.execute("INSERT INTO org_policies (org_id, otp_expiry_hours) VALUES (1, 72)")
     
     conn.commit()
 
