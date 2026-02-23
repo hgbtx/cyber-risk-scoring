@@ -12,12 +12,15 @@ def init_db():
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            org_id INTEGER UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT,
+            otp_hash TEXT,
+            otp_expires_at TEXT,
+            must_change_password INTEGER DEFAULT 1,
             role TEXT NOT NULL DEFAULT 'viewer',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+            FOREIGN KEY (org_id) REFERENCES organizations(id)
         );
 
         CREATE TABLE IF NOT EXISTS assets (
@@ -165,6 +168,16 @@ def init_db():
             name TEXT NOT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS org_policies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL,
+            otp_expiry_hours INTEGER NOT NULL DEFAULT 72,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_by INTEGER,
+            FOREIGN KEY (org_id) REFERENCES organizations(id),
+            FOREIGN KEY (updated_by) REFERENCES users(id)
+        );                       
 
     ''')
     conn.commit()

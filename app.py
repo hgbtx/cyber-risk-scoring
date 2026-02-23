@@ -7,10 +7,11 @@ from flask import Flask, render_template, request, jsonify, session
 app = Flask(__name__)
 
 import time, requests, os, json, re, secrets, string
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from db import get_db, init_db
 from functools import wraps
+from auth_helpers import require_role, check_ownership
 from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
@@ -30,6 +31,11 @@ KEV_CACHE_TTL = 86400  # refresh daily
 #=====================
 # HELPERS
 #=====================
+
+def generate_otp(length=12):
+    alphabet = string.ascii_uppercase + string.digits
+    raw = ''.join(secrets.choice(alphabet) for _ in range(length))
+    return '-'.join(raw[i:i+4] for i in range(0, length, 4))
 
 #---PARSE MENTIONS (myTickets)
 def parse_mentions(text):
@@ -433,10 +439,8 @@ def multiplicative_risk_score(values, weights):
         result *= value ** weight
     
     return result
-
 def max_score(values):
     return max(values) if values else 0
-
 def simple_mean_score(values):
     return sum(values) / len(values) if values else 0
 
@@ -1213,6 +1217,147 @@ def ticket_stats():
         'resolution': {'resolved': resolved, 'total': total},
         'aging': [{'id': r['id'], 'created': r['created'], 'status': r['status']} for r in aging]
     })
+
+#=====================
+# ADMIN ENDPOINTS
+#=====================
+
+@app.route('/admin/users', methods=['GET'])
+@require_role('admin')
+def admin_list_users():
+    conn = get_db()
+    users = conn.execute('SELECT id, username, role, must_change_password, created_at FROM users').fetchall()
+    conn.close()
+    return jsonify([dict(u) for u in users])
+
+@app.route('/admin/users/create', methods=['POST'])
+@require_role('admin')
+def admin_create_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    role = data.get('role', 'viewer')
+    valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst', 'manager', 'admin')
+    if not username:
+        return jsonify({'error': 'Username is required.'}), 400
+    if role not in valid_roles:
+        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
+
+    conn = get_db()
+    if conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone():
+        conn.close()
+        return jsonify({'error': 'Username already exists.'}), 409
+
+    otp = generate_otp()
+    otp_hash = generate_password_hash(otp)
+    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
+    expiry_hours = policy['otp_expiry_hours'] if policy else 72
+    expires_at = (datetime.now() + datetime.__class__(hours=expiry_hours)).isoformat()
+
+    conn.execute(
+        'INSERT INTO users (username, otp_hash, otp_expires_at, role, must_change_password) VALUES (?, ?, ?, ?, ?)',
+        (username, otp_hash, expires_at, role, 1)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'role': role, 'otp': otp, 'expires_at': expires_at}), 201
+
+@app.route('/admin/users/update-role', methods=['POST'])
+@require_role('admin')
+def admin_update_role():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    role = data.get('role', '')
+    valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst','manager', 'admin')
+    if role not in valid_roles:
+        return jsonify({'error': f'Role must be one of {valid_roles}'}), 400
+    conn = get_db()
+    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+    conn.execute('UPDATE users SET role = ? WHERE username = ?', (role, username))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'role': role})
+
+@app.route('/admin/users/reset-otp', methods=['POST'])
+@require_role('admin')
+def admin_reset_otp():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    conn = get_db()
+    user = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+
+    otp = generate_otp()
+    otp_hash = generate_password_hash(otp)
+    policy = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
+    expiry_hours = policy['otp_expiry_hours'] if policy else 72
+    from datetime import timedelta
+    expires_at = (datetime.now() + timedelta(hours=expiry_hours)).isoformat()
+
+    conn.execute(
+        'UPDATE users SET otp_hash = ?, otp_expires_at = ?, must_change_password = 1, password_hash = NULL WHERE username = ?',
+        (otp_hash, expires_at, username)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username, 'otp': otp, 'expires_at': expires_at})
+
+@app.route('/admin/users/delete', methods=['POST'])
+@require_role('admin')
+def admin_delete_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    conn = get_db()
+    user = conn.execute('SELECT id, role FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found.'}), 404
+    if user['role'] == 'admin':
+        count = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0]
+        if count <= 1:
+            conn.close()
+            return jsonify({'error': 'Cannot delete the only admin account.'}), 400
+    conn.execute('DELETE FROM users WHERE username = ?', (username,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'username': username})
+
+@app.route('/admin/policies', methods=['GET'])
+@require_role('admin')
+def admin_get_policies():
+    conn = get_db()
+    policy = conn.execute('SELECT * FROM org_policies LIMIT 1').fetchone()
+    conn.close()
+    return jsonify(dict(policy) if policy else {})
+
+@app.route('/admin/policies', methods=['POST'])
+@require_role('admin')
+def admin_update_policies():
+    data = request.json or {}
+    uid = get_current_user_id()
+    conn = get_db()
+    conn.execute('''
+        UPDATE org_policies SET
+            asset_sharing_mode = COALESCE(?, asset_sharing_mode),
+            sod_enforcement = COALESCE(?, sod_enforcement),
+            otp_expiry_hours = COALESCE(?, otp_expiry_hours),
+            updated_at = ?,
+            updated_by = ?
+        WHERE id = 1
+    ''', (
+        data.get('asset_sharing_mode'),
+        data.get('sod_enforcement'),
+        data.get('otp_expiry_hours'),
+        datetime.now().isoformat(),
+        uid
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 #===========
 # MAIN

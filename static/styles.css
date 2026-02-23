@@ -883,3 +883,73 @@ animation:
 width: 90px;
 height: auto;
 }
+
+/* ========================
+    ADMIN PANEL
+=========================== */
+
+.admin-section {
+    max-width: 700px;
+}
+
+.admin-policy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.admin-field label {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #57534E;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.admin-field select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+}
+
+.admin-save-btn {
+    padding: 8px 20px;
+    font-size: 14px;
+    background-color: #be7a15;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.admin-save-btn:hover {
+    background-color: #d9af6f;
+    color: #57534E;
+}
+
+.admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.admin-users-table thead th {
+    background: #ededed;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 2px solid #ccc;
+    font-weight: 600;
+    color: #444;
+}
+
+.admin-users-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.admin-users-table tbody tr:hover {
+    background-color: #f5f0e8;
+}

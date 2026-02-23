@@ -38,7 +38,7 @@ def create_admin(username, password):
 
 
 def create_user(username, role='viewer'):
-    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
+    valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst','manager', 'admin')
     if role not in valid_roles:
         print(f'Error: Role must be one of {valid_roles}')
         sys.exit(1)
@@ -66,7 +66,7 @@ def create_user(username, role='viewer'):
 
 
 def promote_user(username, role):
-    valid_roles = ('viewer', 'analyst', 'manager', 'admin')
+    valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst','manager', 'admin')
     if role not in valid_roles:
         print(f'Error: Role must be one of {valid_roles}')
         sys.exit(1)
@@ -108,6 +108,24 @@ def reset_otp(username):
     print(f'New one-time password: {otp}')
     print(f'Expires: {expires_at}')
 
+def delete_user(username):
+    init_db()
+    conn = get_db()
+    user = conn.execute('SELECT id, role FROM users WHERE username = ?', (username,)).fetchone()
+    if not user:
+        conn.close()
+        print(f'Error: No account found for "{username}"')
+        sys.exit(1)
+    if user['role'] == 'admin':
+        admin_count = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'").fetchone()[0]
+        if admin_count <= 1:
+            conn.close()
+            print('Error: Cannot delete the only admin account.')
+            sys.exit(1)
+    conn.execute('DELETE FROM users WHERE username = ?', (username,))
+    conn.commit()
+    conn.close()
+    print(f'Account deleted: {username}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='User management CLI')
@@ -128,6 +146,9 @@ if __name__ == '__main__':
     c4 = sub.add_parser('reset-otp', help='Generate a new OTP for a user')
     c4.add_argument('--username', required=True)
 
+    c5 = sub.add_parser('delete-user', help='Delete a user account')
+    c5.add_argument('--username', required=True)
+
     args = parser.parse_args()
     if args.command == 'create-admin':
         create_admin(args.username, args.password)
@@ -137,5 +158,7 @@ if __name__ == '__main__':
         promote_user(args.username, args.role)
     elif args.command == 'reset-otp':
         reset_otp(args.username)
+    elif args.command == 'delete-user':
+        delete_user(args.username)
     else:
         parser.print_help()
