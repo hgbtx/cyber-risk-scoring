@@ -34,11 +34,11 @@ def init_db():
         
         CREATE TABLE IF NOT EXISTS archivedAssets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            asset_id INTEGER NOT NULL,
+            cpeName TEXT NOT NULL,
             user_id INTEGER NOT NULL,
             archived TEXT,
             isArchived INTEGER DEFAULT 0,
-            FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+            FOREIGN KEY (cpeName) REFERENCES assets(cpeName) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 

@@ -514,9 +514,9 @@ def save_assets():
         conn.execute('''
             INSERT INTO assets (cpeName, user_id, title, cpeData, cveData)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, cpeName)
+            ON CONFLICT(cpeName)
             DO UPDATE SET title=excluded.title, cpeData=excluded.cpeData, cveData=excluded.cveData
-        ''', (uid, a['cpeName'], a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{}))))
+        ''', (a['cpeName'], uid, a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{}))))
 
     # Remove assets no longer present
     if incoming_cpes:
@@ -543,7 +543,7 @@ def archive_asset():
         return jsonify({'error': 'cpeName is required'}), 400
 
     conn = get_db()
-    asset = conn.execute('SELECT id FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
+    asset = conn.execute('SELECT cpeName FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
     if not asset:
         conn.close()
         return jsonify({'error': 'Asset not found'}), 404
@@ -599,7 +599,7 @@ def delete_asset():
         conn.close()
         return jsonify({'error': 'Your role does not have permission to delete assets'}), 403
 
-    asset = conn.execute('SELECT id FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
+    asset = conn.execute('SELECT cpeName FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
     if not asset:
         conn.close()
         return jsonify({'error': 'Asset not found'}), 404
@@ -634,7 +634,7 @@ def load_archived_assets():
     rows = conn.execute('''
         SELECT assets.cpeName
         FROM archivedAssets
-        JOIN assets ON archivedAssets.asset_id = assets.id
+        JOIN assets ON archivedAssets.cpeName = assets.cpeName
         WHERE archivedAssets.isArchived = 1
     ''').fetchall()
     conn.close()
