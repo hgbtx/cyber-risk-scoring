@@ -615,29 +615,28 @@ def delete_asset():
 @app.route('/db/load-assets', methods=['GET'])
 @login_required
 def load_assets():
-    uid = get_current_user_id()
     conn = get_db()
-    rows = conn.execute('SELECT * FROM assets WHERE user_id = ?', (uid,)).fetchall()
+    rows = conn.execute('SELECT * FROM assets').fetchall()
     conn.close()
     return jsonify([{
         'cpeName': r['cpeName'],
         'title': r['title'],
         'cpeData': json.loads(r['cpeData']),
-        'cveData': json.loads(r['cveData'])
+        'cveData': json.loads(r['cveData']),
+        'user_id': r['user_id']
     } for r in rows])
 
 #---LOAD ARCHIVED ASSETS---
 @app.route('/db/load-archived-assets', methods=['GET'])
 @login_required
 def load_archived_assets():
-    uid = get_current_user_id()
     conn = get_db()
     rows = conn.execute('''
         SELECT assets.cpeName
         FROM archivedAssets
         JOIN assets ON archivedAssets.asset_id = assets.id
-        WHERE archivedAssets.user_id = ? AND archivedAssets.isArchived = 1
-    ''', (uid,)).fetchall()
+        WHERE archivedAssets.isArchived = 1
+    ''').fetchall()
     conn.close()
     return jsonify([r['cpeName'] for r in rows])
 
