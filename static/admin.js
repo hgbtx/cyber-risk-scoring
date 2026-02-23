@@ -295,8 +295,8 @@ function resetPermissions() {
         currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
         renderPermissionsTable(currentPermissions);
         const status = document.getElementById('permissionsStatus');
-        status.textContent = 'Reset to defaults (unsaved)';
-        status.style.color = '#e67e22';
-        setTimeout(() => status.textContent = '', 3000);
-    });
+    status.textContent = 'Reset to defaults (unsaved)';
+    status.style.color = '#e67e22';
+    setTimeout(() => status.textContent = '', 3000);
+})
 }
