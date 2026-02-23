@@ -512,7 +512,7 @@ def save_assets():
     for a in assets:
         incoming_cpes.add(a['cpeName'])
         conn.execute('''
-            INSERT INTO assets (user_id, cpeName, title, cpeData, cveData)
+            INSERT INTO assets (cpeName, user_id, title, cpeData, cveData)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(user_id, cpeName)
             DO UPDATE SET title=excluded.title, cpeData=excluded.cpeData, cveData=excluded.cveData
