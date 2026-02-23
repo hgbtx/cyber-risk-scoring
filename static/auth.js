@@ -29,6 +29,8 @@ function showApp() {
         loadOrgPolicies();
         loadAdminUsers();
     }
+    // Enforce tab visibility based on role permissions
+    applyTabPermissions();
 }
 
 function showLoginForm() {
@@ -119,6 +121,44 @@ async function handleLogout() {
     if (cvssHistogramInstance) { cvssHistogramInstance.destroy(); cvssHistogramInstance = null; }
     archivedAssets = new Set();
     showAuthOverlay();
+}
+
+//============================
+// TAB PERMISSION ENFORCEMENT
+//============================
+
+// Maps permission category → data-tab attribute value
+const TAB_PERM_MAP = {
+    'Search':           'search',
+    'Asset Directory':  'cve',
+    'myCharts':         'charts',
+    'myTickets':        'tickets'
+};
+
+async function applyTabPermissions() {
+    // Admins always see all tabs
+    if (currentUser && currentUser.role === 'admin') return;
+    try {
+        const res = await fetch('/auth/my-permissions');
+        const data = await res.json();
+        const perms = data.permissions || {};
+        for (const [category, tabId] of Object.entries(TAB_PERM_MAP)) {
+            const viewKey = Object.keys(perms[category] || {}).find(k => k.startsWith('view '));
+            const allowed = viewKey ? perms[category][viewKey] : 1;
+            const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            const tabPanel = document.querySelector(`[data-panel="${tabId}"]`);
+            if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
+            if (tabPanel && !allowed) tabPanel.classList.remove('active');
+        }
+        // If the active tab got hidden, fall back to the first visible tab
+        const activeBtn = document.querySelector('.tab-button.active');
+        if (!activeBtn || activeBtn.style.display === 'none') {
+            const firstVisible = document.querySelector('.tab-button:not([style*="display: none"])');
+            if (firstVisible) firstVisible.click();
+        }
+    } catch (e) {
+        console.error('Failed to load tab permissions:', e);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

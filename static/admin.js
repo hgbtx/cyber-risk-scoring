@@ -291,10 +291,12 @@ async function savePermissions() {
 
 function resetPermissions() {
     if (!confirm('Reset all permissions to defaults?')) return;
-    currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
-    renderPermissionsTable(currentPermissions);
-    const status = document.getElementById('permissionsStatus');
-    status.textContent = 'Reset to defaults (unsaved)';
-    status.style.color = '#e67e22';
-    setTimeout(() => status.textContent = '', 3000);
+    requestAnimationFrame(() => {
+        currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
+        renderPermissionsTable(currentPermissions);
+        const status = document.getElementById('permissionsStatus');
+        status.textContent = 'Reset to defaults (unsaved)';
+        status.style.color = '#e67e22';
+        setTimeout(() => status.textContent = '', 3000);
+    });
 }

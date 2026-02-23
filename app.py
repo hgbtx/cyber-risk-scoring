@@ -143,6 +143,25 @@ def auth_me():
         return jsonify({'authenticated': False}), 401
     return jsonify({'authenticated': True, 'user': dict(user)})
 
+@app.route('/auth/my-permissions', methods=['GET'])
+@login_required
+def get_my_permissions():
+    role = session.get('role', 'viewer')
+    conn = get_db()
+    row = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    conn.close()
+    if row and row['permissions_json']:
+        all_perms = json.loads(row['permissions_json'])
+    else:
+        return jsonify({'permissions': {}})
+    # Extract only this role's permissions
+    my_perms = {}
+    for category, actions in all_perms.items():
+        my_perms[category] = {}
+        for action, roles in actions.items():
+            my_perms[category][action] = roles.get(role, 0)
+    return jsonify({'permissions': my_perms})
+
 #=====================
 # FRONTEND ENDPOINTS
 #=====================
