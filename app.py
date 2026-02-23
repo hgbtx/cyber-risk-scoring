@@ -1509,6 +1509,32 @@ def admin_update_policies():
     conn.close()
     return jsonify({'success': True})
 
+@app.route('/admin/permissions', methods=['GET'])
+@require_role('admin')
+def admin_get_permissions():
+    conn = get_db()
+    row = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    conn.close()
+    if row and row['permissions_json']:
+        return jsonify({'permissions': json.loads(row['permissions_json'])})
+    return jsonify({'permissions': None})
+
+@app.route('/admin/permissions', methods=['POST'])
+@require_role('admin')
+def admin_update_permissions():
+    data = request.json or {}
+    perms = data.get('permissions')
+    if not perms:
+        return jsonify({'error': 'No permissions provided.'}), 400
+    conn = get_db()
+    conn.execute(
+        'UPDATE org_policies SET permissions_json = ?, updated_at = ?, updated_by = ? WHERE id = 1',
+        (json.dumps(perms), datetime.now().isoformat(), get_current_user_id())
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 #===========
 # MAIN
 #===========

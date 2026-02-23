@@ -171,6 +171,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             org_id INTEGER NOT NULL,
             otp_expiry_hours INTEGER NOT NULL DEFAULT 72,
+            permissions_json TEXT,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_by INTEGER,
             FOREIGN KEY (org_id) REFERENCES organizations(id),
