@@ -23,6 +23,10 @@ function showApp() {
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
     loadPersistedData();
+    if (hasMinRole('admin')) {
+        loadOrgPolicies();
+        loadAdminUsers();
+    }
 }
 
 function showLoginForm() {
