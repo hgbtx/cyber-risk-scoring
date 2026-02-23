@@ -172,7 +172,6 @@ const DEFAULT_PERMISSIONS = {
     },
     'Asset Directory': {
         'view Asset Directory tab': { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'save assets':              { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
         'archive assets':           { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
         'delete assets':            { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:0, admin:1 },
         'download CSV':             { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
