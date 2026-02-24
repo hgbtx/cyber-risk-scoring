@@ -136,23 +136,23 @@ function renderTickets() {
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
                 </div>`
-                : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
+                : `${hasPermission('myTickets', 'accept tickets') ? `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>` : ''}`
             }
             ${t.isResolved
                 ? `${t.accepted_by === currentUser?.email
-                    ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
+                    ? `${hasPermission('myTickets', 'reopen tickets') ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>` : ''}
                     <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
                     : ''
                 }`
                 : (t.isAccepted && (t.accepted_by === currentUser?.email || isCollaborator)
                 ? `${t.accepted_by === currentUser?.email
-                    ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
-                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>`
+                    ? `${hasPermission('myTickets', 'resolve tickets') ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>` : ''}
+                    ${hasPermission('myTickets', 'reassign tickets') ? `<button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>` : ''}`
                     : ''}
-                <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
+                ${hasPermission('myTickets', 'comment tickets') ? `<button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>` : ''}`
                 : '')
             }
-            ${isOwner && !t.isAccepted
+            ${isOwner && !t.isAccepted && hasPermission('myTickets', 'delete tickets')
                 ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>`
                 : ''}
         `}
@@ -176,7 +176,7 @@ function renderTickets() {
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${formatMentions(c.comment_description)}</p>
-                        ${(isOwner || isCollaborator) && !c.isFixed
+                        ${(isOwner || isCollaborator) && !c.isFixed && hasPermission('myTickets', 'fix comment tickets')
                             ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
                             : ''}
                     </div>
@@ -509,7 +509,7 @@ function restoreTicket(id) {
 // DELETE TICKETS
 function deleteTicket(id) {
     if (!confirm('Delete this ticket? This cannot be undone.')) return;
-    fetch('/db/delete-ticket', {
+    fetch('/db/ticket-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticket_id: id })
