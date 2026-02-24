@@ -1,0 +1,104 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Cartoon UFO">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D9E2EA"></stop>
+      <stop offset="0.55" stop-color="#9FB0BD"></stop>
+      <stop offset="1" stop-color="#6E7F8C"></stop>
+    </linearGradient>
+
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F3F7FB"></stop>
+      <stop offset="0.5" stop-color="#AFC0CD"></stop>
+      <stop offset="1" stop-color="#F3F7FB"></stop>
+    </linearGradient>
+
+    <radialGradient id="glass" cx="35%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#E9F8FF" stop-opacity="0.95"></stop>
+      <stop offset="0.5" stop-color="#9FE3FF" stop-opacity="0.55"></stop>
+      <stop offset="1" stop-color="#2B88B5" stop-opacity="0.35"></stop>
+    </radialGradient>
+
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE88A" stop-opacity="0."></stop>
+      <stop offset="0.55" stop-color="#FFE88A" stop-opacity="0.35"></stop>
+      <stop offset="6" stop-color="#FFE88A" stop-opacity="0"></stop>
+    </linearGradient>
+
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity="0.25"></feDropShadow>
+    </filter>
+
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="b"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+
+
+  <!-- Ground hint shadow -->
+
+
+  <!-- UFO group -->
+  <g filter="url(#softShadow)">
+    <!-- Top dome -->
+    <path d="M400 150
+             C330 150 275 195 275 245
+             C275 270 295 290 320 290
+             L480 290
+             C505 290 525 270 525 245
+             C525 195 470 150 400 150 Z" fill="url(#glass)" stroke="#1D4D66" stroke-width="6" stroke-linejoin="round"></path>
+
+    <!-- Dome highlight -->
+    
+
+    <!-- Main saucer body -->
+    <ellipse cx="400" cy="310" rx="260" ry="85" fill="url(#metal)" stroke="#2B3A45" stroke-width="8"></ellipse>
+
+    <!-- Rim -->
+
+
+    <!-- Underside -->
+    <ellipse cx="400" cy="340" rx="210" ry="48" fill="#4F5E6A" opacity="0.55"></ellipse>  
+
+    <!-- Lights -->
+    <g>
+      <!-- light positions along the front rim -->
+      <circle cx="210" cy="340" r="16" fill="#FF5A5F" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="285" cy="365" r="16" fill="#FFD166" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="365" cy="382" r="16" fill="#06D6A0" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="445" cy="382" r="16" fill="#4DA3FF" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="525" cy="365" r="16" fill="#B388FF" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="590" cy="340" r="16" fill="#FF9F1C" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="490" cy="315" r="16" fill="#06D6A0" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="380" cy="310" r="16" fill="#4DA3FF" stroke="#2B3A45" stroke-width="6"></circle>
+      <circle cx="275" cy="320" r="16" fill="#B388FF" stroke="#2B3A45" stroke-width="6"></circle>
+      
+      <!-- small glow -->
+      <circle cx="210" cy="340" r="22" fill="#FF5A5F" opacity="0.25" filter="url(#glow)"></circle>
+      <circle cx="285" cy="365" r="22" fill="#FFD166" opacity="0.22" filter="url(#glow)"></circle>
+      <circle cx="490" cy="315" r="22" fill="#06D6A0" opacity="0.20" filter="url(#glow)"></circle>
+      <circle cx="380" cy="310" r="22" fill="#4DA3FF" opacity="0.20" filter="url(#glow)"></circle>
+      <circle cx="525" cy="365" r="22" fill="#B388FF" opacity="0.20" filter="url(#glow)"></circle>
+      <circle cx="275" cy="320" r="22" fill="#B388FF" opacity="0.20" filter="url(#glow)"></circle>
+      <circle cx="590" cy="340" r="22" fill="#FF9F1C" opacity="0.20" filter="url(#glow)"></circle>
+    </g>
+
+    <!-- Beam (no background rectangle; SVG remains transparent) -->
+    <path d="M360 352 L440 352 L560 560 L240 560 Z" fill="url(#beam)" filter="url(#glow)"></path>
+
+    <!-- Bottom hatch -->
+    <ellipse cx="400" cy="352" rx="66" ry="22" fill="#2B3A45" opacity="0.65"></ellipse>
+    <ellipse cx="400" cy="352" rx="44" ry="14" fill="#0F151A" opacity="0.35"></ellipse>    
+    
+    <!-- Antenna -->
+    <g>
+      <path d="M400 140 L400 95" stroke="#2B3A45" stroke-width="8" stroke-linecap="round"></path>
+      <circle cx="400" cy="80" r="16" fill="#FF5A5F" stroke="#2B3A45" stroke-width="6" filter="url(#glow)"></circle>
+    </g>
+  </g>
+</svg>
