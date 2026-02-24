@@ -57,13 +57,9 @@ function renderManageAssetsList(showArchived) {
             <div style="display:flex; gap:6px; flex-shrink:0;">
                 ${isArchived
                     ? `<button class="ma-restore-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#50b88e; color:white; border:none; border-radius:4px; cursor:pointer;">Restore</button>`
-                    : (hasPermission('Asset Directory', 'archive assets')
-                        ? `<button class="ma-archive-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#d9af6f; color:#57534E; border:none; border-radius:4px; cursor:pointer;">Archive</button>`
-                        : '')
+                    : `<button class="ma-archive-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#d9af6f; color:#57534E; border:none; border-radius:4px; cursor:pointer;">Archive</button>`
                 }
-                ${hasPermission('Asset Directory', 'delete assets')
-                    ? `<button class="ma-delete-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#c01e19; color:white; border:none; border-radius:4px; cursor:pointer;">Delete</button>`
-                    : ''}
+                <button class="ma-delete-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#c01e19; color:white; border:none; border-radius:4px; cursor:pointer;">Delete</button>
             </div>
         `;
         container.appendChild(row);
@@ -99,7 +95,7 @@ function renderManageAssetsList(showArchived) {
         btn.addEventListener('click', () => {
             const cpe = btn.dataset.cpe;
             if (!confirm(`Delete "${cveDataStore[cpe]?.title || cpe}" and all its CVE data?`)) return;
-            fetch('/db/deleted-assets', {
+            fetch('/db/delete-asset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cpeName: cpe })
