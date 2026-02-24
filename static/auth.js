@@ -29,8 +29,8 @@ function showApp() {
         loadOrgPolicies();
         loadAdminUsers();
     }
-    // Enforce tab visibility and action button visibility based on role permissions
-    loadUserPermissions();
+    // Enforce tab visibility based on role permissions
+    applyTabPermissions();
 }
 
 function showLoginForm() {
@@ -135,63 +135,30 @@ const TAB_PERM_MAP = {
     'myTickets':        'tickets'
 };
 
-async function loadUserPermissions() {
-    if (currentUser && currentUser.role === 'admin') {
-        currentPermissions = {};
-        applyPermissionsToUI();
-        return;
-    }
+async function applyTabPermissions() {
+    // Admins always see all tabs
+    if (currentUser && currentUser.role === 'admin') return;
     try {
         const res = await fetch('/auth/my-permissions');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        currentPermissions = data.permissions || {};
+        const perms = data.permissions || {};
+        for (const [category, tabId] of Object.entries(TAB_PERM_MAP)) {
+            const viewKey = Object.keys(perms[category] || {}).find(k => k.startsWith('view '));
+            const allowed = viewKey ? perms[category][viewKey] : 1;
+            const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            const tabPanel = document.querySelector(`[data-panel="${tabId}"]`);
+            if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
+            if (tabPanel && !allowed) tabPanel.classList.remove('active');
+        }
+        // If the active tab got hidden, fall back to the first visible tab
+        const activeBtn = document.querySelector('.tab-button.active');
+        if (!activeBtn || activeBtn.style.display === 'none') {
+            const firstVisible = document.querySelector('.tab-button:not([style*="display: none"])');
+            if (firstVisible) firstVisible.click();
+        }
     } catch (e) {
-        console.error('Failed to load permissions:', e);
-        currentPermissions = {};
+        console.error('Failed to load tab permissions:', e);
     }
-    applyPermissionsToUI();
-}
-
-function applyPermissionsToUI() {
-    // Tab visibility
-    for (const [category, tabId] of Object.entries(TAB_PERM_MAP)) {
-        const viewKey = Object.keys(currentPermissions[category] || {}).find(k => k.startsWith('view '));
-        const allowed = (currentUser?.role === 'admin') || (viewKey ? currentPermissions[category][viewKey] : 1);
-        const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
-        const tabPanel = document.querySelector(`[data-panel="${tabId}"]`);
-        if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
-        if (tabPanel && !allowed) tabPanel.classList.remove('active');
-    }
-    // If the active tab got hidden, fall back to the first visible tab
-    const activeBtn = document.querySelector('.tab-button.active');
-    if (!activeBtn || activeBtn.style.display === 'none') {
-        const firstVisible = document.querySelector('.tab-button:not([style*="display: none"])');
-        if (firstVisible) firstVisible.click();
-    }
-    // Action buttons
-    applyActionButtonPermissions();
-}
-
-function applyActionButtonPermissions() {
-    // Asset Directory: CSV/JSON download buttons
-    document.querySelectorAll('button[onclick*="downloadCveCSV"]').forEach(btn =>
-        btn.style.display = hasPermission('Asset Directory', 'download CSV') ? '' : 'none');
-    document.querySelectorAll('button[onclick*="downloadCveJSON"]').forEach(btn =>
-        btn.style.display = hasPermission('Asset Directory', 'download JSON') ? '' : 'none');
-    // Manage Assets button (archive/delete modal)
-    const manageBtn = document.getElementById('manageAssetsBtn');
-    if (manageBtn) {
-        const show = hasPermission('Asset Directory', 'archive assets') ||
-                     hasPermission('Asset Directory', 'delete assets');
-        manageBtn.style.display = show ? '' : 'none';
-    }
-    // myTickets: Create ticket button
-    const createTicketBtn = document.getElementById('createTicketBtn');
-    if (createTicketBtn)
-        createTicketBtn.style.display = hasPermission('myTickets', 'create tickets') ? '' : 'none';
-    // Re-render dynamic content to pick up per-item button gating
-    if (typeof renderTickets === 'function') renderTickets();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
