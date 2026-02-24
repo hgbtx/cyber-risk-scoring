@@ -27,6 +27,7 @@ let cpeDetailSortKey = 'title';
 let cpeDetailSortDir = 'asc';
 let cveEnteredFromDetailView = false;
 let currentUser = null;
+let currentPermissions = {};
 
 // =====================
 // DOM REFERENCES
@@ -150,6 +151,12 @@ async function loadPersistedData() {
 function hasMinRole(minRole) {
     if (!currentUser) return false;
     return (ROLE_LEVELS[currentUser.role] || 0) >= (ROLE_LEVELS[minRole] || 0);
+}
+
+function hasPermission(category, action) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return !!(currentPermissions[category]?.[action]);
 }
 
 // RISK FORMULA HELPER
