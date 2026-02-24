@@ -54,7 +54,7 @@
         <!-- Left Panel -->
         <div class="left-panel-container">
             <!--Drop Zone-->
-            <div class="drop-zone" id="dropZone">
+            <div class="drop-zone" id="dropZone" data-permission-category="Search" data-permission-action="drag and drop to Assets folder">
                 <h3>Assets</h3>
                 <div id="selectedItems">
                     <p id="placeholder" style="color: #999; font-style: italic;">Drag and drop your assets here...</p>
@@ -190,7 +190,7 @@
                     <div id="simpleSearch">
                         <div class="search-container">
                             <input type="text" id="searchInput" placeholder="Search...">
-                            <button id="searchButton">Search</button>
+                            <button id="searchButton" data-permission-category="Search" data-permission-action="perform searches">Search</button>
                         </div>
                         <a href="#" id="toggleAdvancedSearch" class="advanced-search-link">Advanced Search</a>
                     </div>
@@ -249,7 +249,7 @@
                             </div>
                         </div>
                         <div class="search-container" style="margin-top: 12px;">
-                            <button id="advSearchButton">Search</button>
+                            <button id="advSearchButton" data-permission-category="Search" data-permission-action="perform searches">Search</button>
                         </div>
                     </div>
                     <!--Results Container-->
@@ -299,7 +299,7 @@
                 <div class="tab-panel" data-panel="cve">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <h2>Asset Directory</h2>
-                        <span id="manageAssetsBtn" style="cursor:pointer; color:#be7a15; font-size:0.9em;">⚙ Manage Assets</span>
+                        <span id="manageAssetsBtn" style="cursor:pointer; color:#be7a15; font-size:0.9em;" data-permission-category="Asset Directory" data-permission-action="archive assets">⚙ Manage Assets</span>
                     </div>
                     <div id="manageAssetsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:900; justify-content:center; align-items:center;">
                     <div style="background:white; border-radius:8px; padding:24px 32px; max-width:500px; width:90%; max-height:70vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
@@ -320,8 +320,8 @@
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <h3 id="cveFolderTitle"></h3>
                             <span id="cpeInfoIcon" class="cpe-info-icon" title="View CPE Information">&#x1F6C8;</span>
-                            <button class="folder-dl-btn" onclick="downloadCveCSV()">CSV</button>
-                            <button class="folder-dl-btn" onclick="downloadCveJSON()">JSON</button>
+                            <button class="folder-dl-btn" onclick="downloadCveCSV()" data-permission-category="Asset Directory" data-permission-action="download CSV">CSV</button>
+                            <button class="folder-dl-btn" onclick="downloadCveJSON()" data-permission-category="Asset Directory" data-permission-action="download JSON">JSON</button>
                         </div>
                         <div class="cve-folder-scroll">
                             <table id="cveFolderTable" class="cve-detail-table">
@@ -346,8 +346,8 @@
                         <a href="#" id="cpeDetailBackToFolders" class="cve-folder-back">Folder View</a>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <h3>CPE Asset Records</h3>
-                            <button class="folder-dl-btn" onclick="downloadCveCSV()">CSV</button>
-                            <button class="folder-dl-btn" onclick="downloadCveJSON()">JSON</button>
+                            <button class="folder-dl-btn" onclick="downloadCveCSV()" data-permission-category="Asset Directory" data-permission-action="download CSV">CSV</button>
+                            <button class="folder-dl-btn" onclick="downloadCveJSON()" data-permission-category="Asset Directory" data-permission-action="download JSON">JSON</button>
                         </div>
                         <div class="cve-folder-scroll">
                             <table id="cpeDetailTable" class="cve-detail-table">
@@ -383,7 +383,7 @@
                         <div id="dashDetailsRow" style="font-size: 0.88em; color: #57534E;"></div>
                     </div>
                     <div style="margin-bottom: 15px; justify-content: space-between; display: flex; align-items: center; max-width: 600px;">
-                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;">&#65291; Create New Ticket</span>
+                        <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;" data-permission-category="myTickets" data-permission-action="create tickets">&#65291; Create New Ticket</span>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <select id="ticketSortSelect" onchange="renderTickets()" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; color: #57534E; cursor: pointer;">
                                 <option value="default">Sort: Default</option>

@@ -94,6 +94,13 @@ function renderTickets() {
     if (!visibleTickets.length) return;
 
     const uid = currentUser?.id;
+    const canAccept = hasPermission('myTickets', 'accept tickets');
+    const canResolve = hasPermission('myTickets', 'resolve tickets');
+    const canReassign = hasPermission('myTickets', 'reassign tickets');
+    const canReopen = hasPermission('myTickets', 'reopen tickets');
+    const canDelete = hasPermission('myTickets', 'delete tickets');
+    const canComment = hasPermission('myTickets', 'comment tickets');
+    const canFixComment = hasPermission('myTickets', 'fix comment tickets');
 
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
@@ -136,29 +143,29 @@ function renderTickets() {
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
                 </div>`
-                : `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>`
+                : (canAccept ? `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>` : '')
             }
             ${t.isResolved
-                ? `${t.accepted_by === currentUser?.email
-                    ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>
+                ? `${t.accepted_by === currentUser?.username
+                    ? `${canReopen ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>` : ''}
                     <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
                     : ''
                 }`
-                : (t.isAccepted && (t.accepted_by === currentUser?.email || isCollaborator)
-                ? `${t.accepted_by === currentUser?.email
-                    ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>
-                    <button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>`
+                : (t.isAccepted && (t.accepted_by === currentUser?.username || isCollaborator)
+                ? `${t.accepted_by === currentUser?.username
+                    ? `${canResolve ? `<button onclick="resolveTicket(${t.id})" style="padding: 4px 12px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Mark Resolved</button>` : ''}
+                    ${canReassign ? `<button onclick="reassignTicket(${t.id})" style="padding: 4px 12px; background-color: #8e24aa; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reassign</button>` : ''}`
                     : ''}
-                <button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>`
+                ${canComment ? `<button onclick="commentTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Comment</button>` : ''}`
                 : '')
             }
-            ${isOwner && !t.isAccepted
+            ${canDelete && isOwner && !t.isAccepted
                 ? `<button onclick="deleteTicket(${t.id})" style="padding: 4px 12px; background-color: #c01e19; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Delete</button>`
                 : ''}
         `}
         </div>
         <!-- Comment input (below buttons) -->
-        ${t.isAccepted && !t.isResolved && (t.accepted_by === currentUser?.email || isCollaborator)
+        ${t.isAccepted && !t.isResolved && (t.accepted_by === currentUser?.username || isCollaborator)
             ? `<div id="comment-input-${t.id}" style="display: none; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 400px;">
                 <textarea rows="2" placeholder="Add a comment..." style="width: 100%; padding: 6px 8px; font-size: 0.85em; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
                 <div style="display: flex; gap: 6px;">
@@ -176,7 +183,7 @@ function renderTickets() {
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${formatMentions(c.comment_description)}</p>
-                        ${(isOwner || isCollaborator) && !c.isFixed
+                        ${canFixComment && (isOwner || isCollaborator) && !c.isFixed
                             ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
                             : ''}
                     </div>

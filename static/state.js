@@ -27,6 +27,7 @@ let cpeDetailSortKey = 'title';
 let cpeDetailSortDir = 'asc';
 let cveEnteredFromDetailView = false;
 let currentUser = null;
+let userPermissions = null;
 
 // =====================
 // DOM REFERENCES
