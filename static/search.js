@@ -225,19 +225,22 @@ function renderPage() {
     pageResults.forEach((result) => {
         const div = document.createElement('div');
         div.className = 'result-item';
-        div.draggable = true;
+        const canDrag = hasPermission('Search', 'add assets to Asset Directory');
+        div.draggable = canDrag;
         div.dataset.title = result.title;
         div.dataset.cpeName = result.cpeName;
-        
+
         div.innerHTML = `
             <div>
                 <strong>${escapeHtml(result.title)}</strong><br>
                 <small>${escapeHtml(result.cpeName)}</small>
             </div>
         `;
-        
-        div.addEventListener('dragstart', handleDragStart);
-        div.addEventListener('dragend', handleDragEnd);
+
+        if (canDrag) {
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragend', handleDragEnd);
+        }
         
         resultsList.appendChild(div);
     });

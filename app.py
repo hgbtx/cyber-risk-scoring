@@ -606,10 +606,10 @@ def delete_asset():
         conn.close()
         return jsonify({'error': 'User not found'}), 403
 
-    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
-    if perms and perms['permissions']:
-        policy = json.loads(perms['permissions'])
-        allowed = policy.get('myTickets', {}).get('delete assets', {}).get(user['role'], 0)
+    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions_json']:
+        policy = json.loads(perms['permissions_json'])
+        allowed = policy.get('Asset Directory', {}).get('delete assets', {}).get(user['role'], 0)
     else:
         # Fall back to defaults if no saved permissions
         allowed = 0
@@ -763,9 +763,9 @@ def ticket_delete():
         conn.close()
         return jsonify({'error': 'User not found'}), 403
 
-    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
-    if perms and perms['permissions']:
-        policy = json.loads(perms['permissions'])
+    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions_json']:
+        policy = json.loads(perms['permissions_json'])
         allowed = policy.get('myTickets', {}).get('delete tickets', {}).get(user['role'], 0)
     else:
         # Fall back to defaults if no saved permissions
@@ -1101,9 +1101,9 @@ def ticket_reopen():
         conn.close()
         return jsonify({'error': 'User not found'}), 403
 
-    perms = conn.execute('SELECT permissions FROM org_policies LIMIT 1').fetchone()
-    if perms and perms['permissions']:
-        policy = json.loads(perms['permissions'])
+    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions_json']:
+        policy = json.loads(perms['permissions_json'])
         allowed = policy.get('myTickets', {}).get('reopen tickets', {}).get(user['role'], 0)
     else:
         # Fall back to defaults if no saved permissions

@@ -30,6 +30,8 @@ document.getElementById('showArchivedToggle').addEventListener('click', function
 function renderManageAssetsList(showArchived) {
     const container = document.getElementById('manageAssetsList');
     container.innerHTML = '';
+    const canArchive = hasPermission('Asset Directory', 'archive assets');
+    const canDeleteAsset = hasPermission('Asset Directory', 'delete assets');
 
     const activeCpes = Object.keys(cveDataStore).filter(c => !archivedAssets.has(c));
     const archivedCpes = Object.keys(cveDataStore).filter(c => archivedAssets.has(c));
@@ -55,11 +57,11 @@ function renderManageAssetsList(showArchived) {
                 <small style="color:#666; margin-left:8px;">${count} CVEs</small>
             </div>
             <div style="display:flex; gap:6px; flex-shrink:0;">
-                ${isArchived
+                ${canArchive ? (isArchived
                     ? `<button class="ma-restore-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#50b88e; color:white; border:none; border-radius:4px; cursor:pointer;">Restore</button>`
                     : `<button class="ma-archive-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#d9af6f; color:#57534E; border:none; border-radius:4px; cursor:pointer;">Archive</button>`
-                }
-                <button class="ma-delete-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#c01e19; color:white; border:none; border-radius:4px; cursor:pointer;">Delete</button>
+                ) : ''}
+                ${canDeleteAsset ? `<button class="ma-delete-btn" data-cpe="${escapeHtml(cpe)}" style="padding:4px 10px; font-size:0.8em; background:#c01e19; color:white; border:none; border-radius:4px; cursor:pointer;">Delete</button>` : ''}
             </div>
         `;
         container.appendChild(row);

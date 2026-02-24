@@ -15,13 +15,19 @@ function showAuthOverlay() {
     showLoginForm();
 }
 
-function showApp() {
+async function showApp() {
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('appContainer').style.display = 'flex';
     const bar = document.getElementById('userBar');
     bar.style.display = 'flex';
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
+
+    // Load permissions BEFORE rendering data so hasPermission() works in render functions
+    await loadUserPermissions();
+    applyTabPermissions();
+    applyPermissions();
+
     loadPersistedData();
     const adminTab = document.querySelector('[data-tab="admin"]');
     if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
@@ -29,8 +35,6 @@ function showApp() {
         loadOrgPolicies();
         loadAdminUsers();
     }
-    // Enforce tab visibility based on role permissions
-    applyTabPermissions();
 }
 
 function showLoginForm() {
@@ -111,6 +115,7 @@ async function handleSetPassword() {
 async function handleLogout() {
     await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
     currentUser = null;
+    userPermissions = null;
     allResults = []; cveDataStore = {}; cpeDataStore = {};
     totalCveCount = 0; tickets = []; ticketIdCounter = 1;
     selectedItems.innerHTML = '<p id="placeholder" style="color:#999;font-style:italic;">Drag and drop your assets here...</p>';
@@ -124,8 +129,41 @@ async function handleLogout() {
 }
 
 //============================
-// TAB PERMISSION ENFORCEMENT
+// PERMISSION ENFORCEMENT
 //============================
+
+// Fetch the current user's permission matrix and store globally
+async function loadUserPermissions() {
+    if (currentUser && currentUser.role === 'admin') { userPermissions = null; return; }
+    try {
+        const res = await fetch('/auth/my-permissions');
+        const data = await res.json();
+        userPermissions = data.permissions || {};
+    } catch (e) {
+        console.error('Failed to load user permissions:', e);
+        userPermissions = {};
+    }
+}
+
+// Check a single permission — safe to call from any render function
+function hasPermission(category, action) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    if (!userPermissions) return true;
+    return !!(userPermissions[category] && userPermissions[category][action]);
+}
+
+// Hide/show static DOM elements tagged with data-permission-category/action
+function applyPermissions() {
+    if (currentUser && currentUser.role === 'admin') return;
+    const perms = userPermissions || {};
+    document.querySelectorAll('[data-permission-category]').forEach(el => {
+        const cat = el.dataset.permissionCategory;
+        const act = el.dataset.permissionAction;
+        if (!cat || !act) return;
+        el.style.display = (perms[cat] && perms[cat][act]) ? '' : 'none';
+    });
+}
 
 // Maps permission category → data-tab attribute value
 const TAB_PERM_MAP = {
@@ -135,29 +173,23 @@ const TAB_PERM_MAP = {
     'myTickets':        'tickets'
 };
 
-async function applyTabPermissions() {
-    // Admins always see all tabs
+// Hide/show tabs based on "view X tab" permissions
+function applyTabPermissions() {
     if (currentUser && currentUser.role === 'admin') return;
-    try {
-        const res = await fetch('/auth/my-permissions');
-        const data = await res.json();
-        const perms = data.permissions || {};
-        for (const [category, tabId] of Object.entries(TAB_PERM_MAP)) {
-            const viewKey = Object.keys(perms[category] || {}).find(k => k.startsWith('view '));
-            const allowed = viewKey ? perms[category][viewKey] : 1;
-            const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
-            const tabPanel = document.querySelector(`[data-panel="${tabId}"]`);
-            if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
-            if (tabPanel && !allowed) tabPanel.classList.remove('active');
-        }
-        // If the active tab got hidden, fall back to the first visible tab
-        const activeBtn = document.querySelector('.tab-button.active');
-        if (!activeBtn || activeBtn.style.display === 'none') {
-            const firstVisible = document.querySelector('.tab-button:not([style*="display: none"])');
-            if (firstVisible) firstVisible.click();
-        }
-    } catch (e) {
-        console.error('Failed to load tab permissions:', e);
+    const perms = userPermissions || {};
+    for (const [category, tabId] of Object.entries(TAB_PERM_MAP)) {
+        const viewKey = Object.keys(perms[category] || {}).find(k => k.startsWith('view '));
+        const allowed = viewKey ? perms[category][viewKey] : 1;
+        const tabBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        const tabPanel = document.querySelector(`[data-panel="${tabId}"]`);
+        if (tabBtn) tabBtn.style.display = allowed ? '' : 'none';
+        if (tabPanel && !allowed) tabPanel.classList.remove('active');
+    }
+    // If the active tab got hidden, fall back to the first visible tab
+    const activeBtn = document.querySelector('.tab-button.active');
+    if (!activeBtn || activeBtn.style.display === 'none') {
+        const firstVisible = document.querySelector('.tab-button:not([style*="display: none"])');
+        if (firstVisible) firstVisible.click();
     }
 }
 
