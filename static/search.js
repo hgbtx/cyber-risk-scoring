@@ -4,6 +4,7 @@
 
 // PERFORM SEARCH
 async function performSearch() {
+    if (!hasPermission('Search', 'perform searches')) return;
     const searchTerm = searchInput.value.trim();
     if (searchTerm) {
         searchButton.disabled = true;
@@ -36,7 +37,7 @@ async function performSearch() {
 // SEARCH EVENT LISTENERS
 searchButton.addEventListener('click', performSearch);
 searchInput.addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && hasPermission('Search', 'perform searches')) {
         performSearch();
     }
 });
@@ -56,6 +57,7 @@ document.getElementById('toggleSimpleSearch').addEventListener('click', (e) => {
 
 // ADVANCED SEARCH
 async function performAdvancedSearch() {
+    if (!hasPermission('Search', 'perform searches')) return;
     const fields = {
         part: document.getElementById('advPart').value,
         vendor: document.getElementById('advVendor').value.trim(),
@@ -225,8 +227,9 @@ function renderPage() {
     pageResults.forEach((result) => {
         const div = document.createElement('div');
         div.className = 'result-item';
-        const canDrag = hasPermission('Search', 'add assets to Asset Directory');
+        const canDrag = hasPermission('Search', 'drag and drop to Assets folder');
         div.draggable = canDrag;
+        if (!canDrag) div.style.cursor = 'default';
         div.dataset.title = result.title;
         div.dataset.cpeName = result.cpeName;
 
