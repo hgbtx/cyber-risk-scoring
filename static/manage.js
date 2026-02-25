@@ -97,7 +97,7 @@ function renderManageAssetsList(showArchived) {
         btn.addEventListener('click', () => {
             const cpe = btn.dataset.cpe;
             if (!confirm(`Delete "${cveDataStore[cpe]?.title || cpe}" and all its CVE data?`)) return;
-            fetch('/db/delete-asset', {
+            fetch('/db/deleted-assets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cpeName: cpe })
