@@ -618,12 +618,12 @@ def delete_asset():
         conn.close()
         return jsonify({'error': 'Your role does not have permission to delete assets'}), 403
 
-    asset = conn.execute('SELECT cpeName FROM assets WHERE user_id = ? AND cpeName = ?', (uid, cpe_name)).fetchone()
+    asset = conn.execute('SELECT cpeName FROM assets WHERE cpeName = ?', (cpe_name,)).fetchone()
     if not asset:
         conn.close()
         return jsonify({'error': 'Asset not found'}), 404
 
-    conn.execute('DELETE FROM archivedAssets WHERE cpeName = ? AND user_id = ?', (cpe_name, uid))
+    conn.execute('DELETE FROM archivedAssets WHERE cpeName = ?', (cpe_name,))
     conn.execute('DELETE FROM assets WHERE cpeName = ?', (cpe_name,))
 
     conn.commit()
