@@ -44,10 +44,19 @@
     </div>
 
     <!-- User Bar -->
-    <div id="userBar" style="display:none; position:fixed; top:0; left:0; right:0; height:36px; background:#57534E; color:#eee; align-items:center; justify-content:flex-end; padding:0 20px; gap:12px; font-size:0.82em; z-index:500;">
-    <span id="userUsername"></span>
-    <span id="userRole" style="background:#d9af6f;color:#57534E;padding:1px 8px;border-radius:3px;font-weight:600;font-size:0.9em;text-transform:uppercase;"></span>
-    <button onclick="handleLogout()" style="background:none;border:1px solid #999;color:#ccc;padding:2px 10px;border-radius:3px;cursor:pointer;">Sign Out</button>
+    <div id="userBar" style="display:none; position:fixed; top:0; left:0; right:0; height:36px; background:#57534E; color:#eee; align-items:center; justify-content:space-between; padding:0 20px; font-size:0.82em; z-index:500;">
+    <div class="tab-header">
+        <button class="tab-button active" data-tab="search">Search</button>
+        <button class="tab-button" data-tab="cve">Asset Directory</button>
+        <button class="tab-button" data-tab="charts">Charts</button>
+        <button class="tab-button" data-tab="tickets">myTickets</button>
+        <button class="tab-button" data-tab="admin">Admin</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <span id="userUsername"></span>
+        <span id="userRole" style="background:#d9af6f;color:#57534E;padding:1px 8px;border-radius:3px;font-weight:600;font-size:0.9em;text-transform:uppercase;"></span>
+        <button onclick="handleLogout()" style="background:none;border:1px solid #999;color:#ccc;padding:2px 10px;border-radius:3px;cursor:pointer;">Sign Out</button>
+    </div>
     </div>
 
     <div id="appContainer" class="main-layout" style="display:none; margin-top:36px;">
@@ -174,13 +183,6 @@
 
         <!-- Tab Container -->
         <div class="tab-container" style="display: flex; flex-direction: column;">
-            <div class="tab-header">
-                <button class="tab-button active" data-tab="search">Search</button>
-                <button class="tab-button" data-tab="cve">Asset Directory</button>
-                <button class="tab-button" data-tab="charts">Charts</button>
-                <button class="tab-button" data-tab="tickets">myTickets</button>
-                <button class="tab-button" data-tab="admin">Admin</button>
-            </div>
             <div class="tab-content">
 
                 <!--Search Tab-->
