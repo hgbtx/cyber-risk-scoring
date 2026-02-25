@@ -1,0 +1,26 @@
+# Ignore everything
+*
+
+# Do not ignore directories (required for re-including files inside them)
+!*/
+
+# Always ignore worktrees and local Claude config (even with !*/ above)
+.claude/worktrees/
+
+# Re-include folders and their direct files only (no subdirectories)
+!templates/
+!templates/*
+!static/
+!static/*
+!img/
+!img/*
+!static/img/
+!static/img/*
+
+# Re-include specific files
+!app.db
+!db.py
+!app.py
+!manage.py
+!auth_helpers.py
+!README.md
