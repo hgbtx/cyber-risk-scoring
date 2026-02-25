@@ -23,24 +23,14 @@ async function showApp() {
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
 
-    // Hide admin tab and panel BEFORE permission-based tab logic runs,
-    // so the fallback "first visible tab" never lands on admin
-    const adminTab = document.querySelector('[data-tab="admin"]');
-    const adminPanel = document.querySelector('[data-panel="admin"]');
-    if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
-    if (adminPanel && !hasMinRole('admin')) adminPanel.style.display = 'none';
-
     // Load permissions BEFORE rendering data so hasPermission() works in render functions
     await loadUserPermissions();
     applyTabPermissions();
     applyPermissions();
 
-    // Hide left panel on Search tab if user lacks drag-and-drop permission
-    if (!hasPermission('Search', 'drag and drop to Assets folder')) {
-        leftPanel.style.display = 'none';
-    }
-
     loadPersistedData();
+    const adminTab = document.querySelector('[data-tab="admin"]');
+    if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
     if (hasMinRole('admin')) {
         loadOrgPolicies();
         loadAdminUsers();
@@ -129,13 +119,7 @@ async function handleLogout() {
     allResults = []; cveDataStore = {}; cpeDataStore = {};
     totalCveCount = 0; tickets = []; ticketIdCounter = 1;
     selectedItems.innerHTML = '<p id="placeholder" style="color:#999;font-style:italic;">Drag and drop your assets here...</p>';
-    const addAssetsBtn = document.getElementById('addAssetsBtn');
-    if (addAssetsBtn) addAssetsBtn.style.display = 'none';
     document.getElementById('cveCounts').textContent = '0 CVEs found';
-    leftPanel.style.display = '';
-    // Reset admin panel visibility for next login
-    const adminPanelEl = document.querySelector('[data-panel="admin"]');
-    if (adminPanelEl) adminPanelEl.style.display = '';
     resultsList.innerHTML = ''; resultsContainer.style.display = 'none';
     document.getElementById('ticketsList').innerHTML = '';
     if (epssChartInstance) { epssChartInstance.destroy(); epssChartInstance = null; }
