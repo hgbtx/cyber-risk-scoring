@@ -37,12 +37,23 @@ tabButtons.forEach(button => {
         // Show/hide filter panel based on active tab
         const filterBtn = document.getElementById('openSearchFilterModal');
         filterBtn.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'inline-block' : 'none';
-        // Show/hide Assets drop zone and CVE counter based on active tab
-        const dropZone = document.getElementById('dropZone');
+        // Show/hide Assets drop zone, CVE counter, and left panel based on active tab + permissions
+        const dropZoneEl = document.getElementById('dropZone');
         const cveCountsContainer = document.querySelector('.cveCounts-container');
         const isSearch = button.dataset.tab === 'search';
-        dropZone.style.display = isSearch ? 'block' : 'none';
-        cveCountsContainer.style.display = isSearch ? 'block' : 'none';
+        const isCharts = button.dataset.tab === 'charts';
+        const hasDragPerm = hasPermission('Search', 'drag and drop to Assets folder');
+
+        dropZoneEl.style.display = (isSearch && hasDragPerm) ? 'block' : 'none';
+        cveCountsContainer.style.display = (isSearch && hasDragPerm) ? 'block' : 'none';
+
+        if (isSearch) {
+            leftPanel.style.display = hasDragPerm ? '' : 'none';
+        } else if (isCharts) {
+            leftPanel.style.display = '';
+        } else {
+            leftPanel.style.display = 'none';
+        }
 
         const targetPanel = document.querySelector(`.tab-panel[data-panel="${button.dataset.tab}"]`);
         if (targetPanel) targetPanel.classList.add('active');
