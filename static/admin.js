@@ -184,18 +184,21 @@ const DEFAULT_PERMISSIONS = {
         'download PDF':                       { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 }
     },
     myTickets: {
-        'view myTickets tab':   { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'create tickets':       { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'delete tickets':       { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
-        'resolve tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'reassign tickets':     { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
-        'reopen tickets':       { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':1, manager:1, admin:1 },
-        'accept tickets':       { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'update ticket status': { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'fix comment tickets':  { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'accept resolution':    { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'download ticket log':  { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 }
+        'view myTickets tab':       { viewer:1, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'create tickets':           { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'delete tickets':           { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'resolve tickets':          { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'reassign tickets':         { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'reopen tickets':           { viewer:0, 'tier 1 analyst':0, 'tier 2 analyst':1, manager:1, admin:1 },
+        'accept tickets':           { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'update ticket status':     { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'comment tickets':          { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'fix comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'accept resolution':        { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'fix comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'accept ticket resolution': { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
+        'download ticket log':      { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
+        'download ticket log':      { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 }
     }
 };
 
