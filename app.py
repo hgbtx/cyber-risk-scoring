@@ -975,71 +975,45 @@ def ticket_confirm_resolution():
         return jsonify({'error': 'ticket_id is required'}), 400
 
     conn = get_db()
-    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
-    if not ticket:
+    try:
+        ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+        if not ticket:
+            return jsonify({'error': 'Ticket not found'}), 404
+        
+        accepted = conn.execute(
+            'SELECT user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+        ).fetchone()
+        if not accepted:
+            return jsonify({'error': 'Ticket must be accepted before resolving'}), 400
+        if accepted['user_id'] != get_current_user_id():
+            return jsonify({'error': 'Only the accepting user can resolve this ticket'}), 403
+
+        resolved_ts = None
+        if is_resolved:
+            resolved_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+
+        existing = conn.execute('SELECT id FROM resolvedTickets WHERE ticket_id = ?', (ticket_id,)).fetchone()
+        if existing:
+            conn.execute(
+                'UPDATE resolvedTickets SET resolved = ?, isResolved = ? WHERE ticket_id = ?',
+                (resolved_ts, int(is_resolved), ticket_id)
+            )
+        else:
+            conn.execute(
+                'INSERT INTO resolvedTickets (ticket_id, resolved, isResolved) VALUES (?, ?, ?)',
+                (ticket_id, resolved_ts, int(is_resolved))
+            )
+
+        action = 'Resolved' if is_resolved else 'Reopened'
+        conn.execute(
+            'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+            (ticket_id, get_current_user_id(), action, resolved_ts or datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p'))
+        )
+
+        conn.commit()
+        return jsonify({'success': True, 'ticket_id': ticket_id, 'isResolved': is_resolved, 'resolved': resolved_ts})
+    finally:
         conn.close()
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    # Must be resolved first
-    resolved = conn.execute(
-        'SELECT isResolved FROM resolvedTickets WHERE ticket_id = ? AND isResolved = 1', (ticket_id,)
-    ).fetchone()
-    if not resolved:
-        conn.close()
-        return jsonify({'error': 'Ticket must be resolved before confirming resolution'}), 400
-
-    # Role-based permission check
-    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'error': 'User not found'}), 403
-
-    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
-    if perms and perms['permissions_json']:
-        policy = json.loads(perms['permissions_json'])
-        allowed = policy.get('myTickets', {}).get('accept ticket resolution', {}).get(user['role'], 0)
-    else:
-        allowed = 0
-
-    if not allowed:
-        conn.close()
-        return jsonify({'error': 'Your role does not have permission to accept resolutions'}), 403
-
-    # The confirming user cannot be the same user who resolved the ticket
-    accepted = conn.execute(
-        'SELECT user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
-    ).fetchone()
-    if accepted and accepted['user_id'] == uid:
-        conn.close()
-        return jsonify({'error': 'The resolver cannot confirm their own resolution'}), 403
-
-    # Check if already confirmed
-    existing = conn.execute(
-        'SELECT id FROM confirmedResolutions WHERE ticket_id = ? AND isConfirmed = 1', (ticket_id,)
-    ).fetchone()
-    if existing:
-        conn.close()
-        return jsonify({'error': 'Resolution already confirmed'}), 409
-
-    confirmed_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
-
-    conn.execute(
-        'INSERT INTO confirmedResolutions (ticket_id, user_id, confirmed, isConfirmed) VALUES (?, ?, ?, 1)',
-        (ticket_id, uid, confirmed_ts)
-    )
-
-    conn.execute(
-        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-        (ticket_id, uid, 'Resolution Confirmed', confirmed_ts)
-    )
-
-    conn.commit()
-    conn.close()
-    return jsonify({
-        'success': True, 'ticket_id': ticket_id,
-        'confirmed': confirmed_ts, 'confirmed_by': username
-    })
 
 #---COMMENT TICKET---
 @app.route('/db/ticket-comment', methods=['POST'])
@@ -1186,61 +1160,59 @@ def ticket_reopen():
         return jsonify({'error': 'ticket_id is required'}), 400
 
     conn = get_db()
-    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
-    if not ticket:
+    try:
+        ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+        if not ticket:
+            return jsonify({'error': 'Ticket not found'}), 404
+
+        # Role check
+        user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+        if not user:
+            return jsonify({'error': 'User not found'}), 403
+
+        perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+        if perms and perms['permissions_json']:
+            policy = json.loads(perms['permissions_json'])
+            allowed = policy.get('myTickets', {}).get('reopen tickets', {}).get(user['role'], 0)
+        else:
+            allowed = 0
+
+        if not allowed:
+            return jsonify({'error': 'Your role does not have permission to reopen tickets'}), 403
+
+        reopened_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+        username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+
+        # Clear resolution
+        conn.execute(
+            'UPDATE resolvedTickets SET isResolved = 0, resolved = NULL WHERE ticket_id = ?',
+            (ticket_id,)
+        )
+
+        conn.execute(
+            'UPDATE confirmedResolutions SET isConfirmed = 0, confirmed = NULL WHERE ticket_id = ?',
+            (ticket_id,)
+        )
+
+        # Log activity
+        conn.execute(
+            'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+            (ticket_id, uid, 'Reopened', reopened_ts)
+        )
+
+        # Reset status to In Progress
+        conn.execute(
+            'UPDATE ticketStatus SET status = ? WHERE ticket_id = ?',
+            ('In Progress', ticket_id)
+        )
+
+        conn.commit()
+        return jsonify({
+            'success': True, 'ticket_id': ticket_id,
+            'reopened': reopened_ts, 'reopened_by': username
+        })
+    finally:
         conn.close()
-        return jsonify({'error': 'Ticket not found'}), 404
-
-    # Role check
-    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'error': 'User not found'}), 403
-
-    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
-    if perms and perms['permissions_json']:
-        policy = json.loads(perms['permissions_json'])
-        allowed = policy.get('myTickets', {}).get('reopen tickets', {}).get(user['role'], 0)
-    else:
-        # Fall back to defaults if no saved permissions
-        allowed = 0
-
-    if not allowed:
-        conn.close()
-        return jsonify({'error': 'Your role does not have permission to reopen tickets'}), 403
-
-    reopened_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
-    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
-
-    # Clear resolution
-    conn.execute(
-        'UPDATE resolvedTickets SET isResolved = 0, resolved = NULL WHERE ticket_id = ?',
-        (ticket_id,)
-    )
-
-    conn.execute(
-        'UPDATE confirmedResolutions SET isConfirmed = 0, confirmed = NULL WHERE ticket_id = ?',
-        (ticket_id,)
-    )
-
-    # Log activity
-    conn.execute(
-        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
-        (ticket_id, uid, 'Reopened', reopened_ts)
-    )
-
-    # Reset status to In Progress
-    conn.execute(
-        'UPDATE ticketStatus SET status = ? WHERE ticket_id = ?',
-        ('In Progress', ticket_id)
-    )
-
-    conn.commit()
-    conn.close()
-    return jsonify({
-        'success': True, 'ticket_id': ticket_id,
-        'reopened': reopened_ts, 'reopened_by': username
-    })
 
 #---ARCHIVE TICKET---
 @app.route('/db/ticket-archive', methods=['POST'])
