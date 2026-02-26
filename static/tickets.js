@@ -24,7 +24,7 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
     const ticket = {
         id: ticketIdCounter++,
         user_id: currentUser?.id,
-        creator_email: currentUser?.email,
+        creator_email: currentUser?.username,
         description: desc,
         feature: feature,
         created: new Date().toLocaleString(),
@@ -143,7 +143,7 @@ function renderTickets() {
                 ? `<div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-size: 0.82em; color: #888;"></span>
                 </div>`
-                : (canAccept ? `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>` : '')
+                : (canAccept && !isOwner ? `<button onclick="acceptTicket(${t.id})" style="padding: 4px 12px; background-color: #1565c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept</button>` : '')
             }
             ${t.isResolved
                 ? `${t.accepted_by === currentUser?.username
@@ -183,7 +183,7 @@ function renderTickets() {
                         <span style="font-size: 0.82em; color: #888;">Comment by ${escapeHtml(c.comment_by)} — ${escapeHtml(c.commented)}</span>
                         ${c.isFixed ? '<span style="font-size: 0.78em; color: #2e7d32; font-weight: 600; margin-left: 8px;">✔ Fixed</span>' : ''}
                         <p style="margin: 2px 0 0 0; font-size: 0.88em; color: #444;">${formatMentions(c.comment_description)}</p>
-                        ${canFixComment && (isOwner || isCollaborator) && !c.isFixed
+                        ${canFixComment && (t.accepted_by === currentUser?.username || isCollaborator) && !c.isFixed
                             ? `<button onclick="fixComment(${t.id}, ${c.id})" style="margin-top: 4px; padding: 2px 10px; background-color: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em;">Fix</button>`
                             : ''}
                     </div>
@@ -225,7 +225,7 @@ function statusTicket(id, status) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: `Status changed to ${data.status}`,
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: data.updated
                 });
             }
@@ -255,7 +255,7 @@ function acceptTicket(id) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Accepted',
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: data.accepted
                 });
             }
@@ -297,6 +297,7 @@ function submitComment(id) {
             if (t) {
                 if (!t.comments) t.comments = [];
                 t.comments.push({
+                    id: data.comment_id,
                     comment_by: data.comment_by,
                     commented: data.commented,
                     comment_description: data.comment_description

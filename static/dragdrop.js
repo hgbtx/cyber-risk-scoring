@@ -114,11 +114,12 @@ async function commitStagedItems() {
             renderEpssChart();
             renderCvssHistogram();
             initPublishedDateSlider();
-            saveAssets();
         } catch (error) {
             console.error('Error fetching CVEs:', error);
         }
     }
+
+    await saveAssets();
 
     if (btn) {
         btn.disabled = false;

@@ -526,28 +526,33 @@ def save_assets():
     assets = request.json.get('assets', [])
     conn = get_db()
 
-    # Upsert each asset (preserves existing IDs)
-    incoming_cpes = set()
-    for a in assets:
-        incoming_cpes.add(a['cpeName'])
-        conn.execute('''
-            INSERT INTO assets (cpeName, user_id, title, cpeData, cveData)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(cpeName)
-            DO UPDATE SET title=excluded.title, cpeData=excluded.cpeData, cveData=excluded.cveData
-        ''', (a['cpeName'], uid, a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{}))))
+    try:
+        # Upsert each asset (preserves existing IDs)
+        incoming_cpes = set()
+        for a in assets:
+            incoming_cpes.add(a['cpeName'])
+            conn.execute('''
+                INSERT INTO assets (cpeName, user_id, title, cpeData, cveData)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(cpeName)
+                DO UPDATE SET title=excluded.title, cpeData=excluded.cpeData, cveData=excluded.cveData
+            ''', (a['cpeName'], uid, a.get('title',''), json.dumps(a.get('cpeData',{})), json.dumps(a.get('cveData',{}))))
 
-    # Remove assets no longer present
-    if incoming_cpes:
-        placeholders = ','.join('?' * len(incoming_cpes))
-        conn.execute(f'DELETE FROM assets WHERE user_id = ? AND cpeName NOT IN ({placeholders})',
-                     (uid, *incoming_cpes))
-    else:
-        conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
+        # Remove assets no longer present
+        if incoming_cpes:
+            placeholders = ','.join('?' * len(incoming_cpes))
+            conn.execute(f'DELETE FROM assets WHERE user_id = ? AND cpeName NOT IN ({placeholders})',
+                         (uid, *incoming_cpes))
+        else:
+            conn.execute('DELETE FROM assets WHERE user_id = ?', (uid,))
 
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True})
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
 #---ARCHIVE ASSETS---
 @app.route('/db/archived-assets', methods=['POST'])
@@ -809,10 +814,14 @@ def ticket_acceptance():
         return jsonify({'error': 'ticket_id is required'}), 400
 
     conn = get_db()
-    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
+
+    if ticket['user_id'] == uid:
+        conn.close()
+        return jsonify({'error': 'Ticket owners cannot accept their own tickets'}), 403
 
     # Check if already accepted
     existing = conn.execute('SELECT id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)).fetchone()
@@ -987,10 +996,11 @@ def ticket_comment():
     username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
 
     accepted_id = accepted['id'] if accepted else None
-    conn.execute(
+    cursor = conn.execute(
         'INSERT INTO commentTickets (ticket_id, accepted_id, user_id, commented, comment_description) VALUES (?, ?, ?, ?, ?)',
         (ticket_id, accepted_id, uid, commented_ts, comment_desc)
     )
+    comment_id = cursor.lastrowid
 
     # Parse @mentions and add collaborators
     mentions = parse_mentions(comment_desc)
@@ -1018,7 +1028,7 @@ def ticket_comment():
     conn.commit()
     conn.close()
     return jsonify({
-        'success': True, 'ticket_id': ticket_id,
+        'success': True, 'ticket_id': ticket_id, 'comment_id': comment_id,
         'commented': commented_ts, 'comment_by': username,
         'comment_description': comment_desc,
         'new_collaborators': new_collaborators
@@ -1038,20 +1048,23 @@ def ticket_comment_fix():
 
     conn = get_db()
 
-# Verify ticket exists and this user is the ticket owner OR a collaborator
-    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    # Verify ticket exists and this user is the ticket acceptor OR a collaborator
+    ticket = conn.execute('SELECT id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
     if not ticket:
         conn.close()
         return jsonify({'error': 'Ticket not found'}), 404
 
-    is_owner = ticket['user_id'] == uid
+    accepted = conn.execute(
+        'SELECT id, user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    is_acceptor = accepted is not None and accepted['user_id'] == uid
     is_collaborator = conn.execute(
         'SELECT id FROM ticketCollaborators WHERE ticket_id = ? AND user_id = ?', (ticket_id, uid)
     ).fetchone() is not None
 
-    if not is_owner and not is_collaborator:
+    if not is_acceptor and not is_collaborator:
         conn.close()
-        return jsonify({'error': 'Only the ticket owner or a collaborator can mark comments as fixed'}), 403
+        return jsonify({'error': 'Only the ticket acceptor or a collaborator can mark comments as fixed'}), 403
 
     comment = conn.execute('SELECT id FROM commentTickets WHERE id = ? AND ticket_id = ?', (comment_id, ticket_id)).fetchone()
     if not comment:

@@ -72,7 +72,7 @@ function saveTickets() {
 }
 
 // SAVE ASSETS TO BACKEND
-function saveAssets() {
+async function saveAssets() {
     const assets = [];
     for (const cpeName in cveDataStore) {
         assets.push({
@@ -82,14 +82,18 @@ function saveAssets() {
             cveData: cveDataStore[cpeName] || {}
         });
     }
-    fetch('/db/save-assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assets })
-    })
-    .then(r => { if (!r.ok) console.error('save-assets failed:', r.status); return r.json(); })
-    .then(d => console.log('save-assets response:', d))
-    .catch(e => console.error('save-assets error:', e));
+    try {
+        const r = await fetch('/db/save-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assets })
+        });
+        if (!r.ok) console.error('save-assets failed:', r.status);
+        const d = await r.json();
+        console.log('save-assets response:', d);
+    } catch (e) {
+        console.error('save-assets error:', e);
+    }
 }
 
 // LOAD PERSISTED DATA ON STARTUP
