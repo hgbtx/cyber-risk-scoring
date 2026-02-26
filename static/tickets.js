@@ -101,7 +101,7 @@ function renderTickets() {
     const canDelete = hasPermission('myTickets', 'delete tickets');
     const canComment = hasPermission('myTickets', 'comment tickets');
     const canFixComment = hasPermission('myTickets', 'fix comment tickets');
-    const canAcceptResolution = hasPermission('myTickets', 'accept resolution');
+    const canAcceptResolution = hasPermission('myTickets', 'accept ticket resolution');
 
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);

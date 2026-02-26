@@ -194,10 +194,7 @@ const DEFAULT_PERMISSIONS = {
         'update ticket status':     { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
         'comment tickets':          { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
         'fix comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'accept resolution':        { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'fix comment tickets':      { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
         'accept ticket resolution': { viewer:0, 'tier 1 analyst':1, 'tier 2 analyst':1, manager:1, admin:1 },
-        'download ticket log':      { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 },
         'download ticket log':      { viewer:1, 'tier 1 analyst':0, 'tier 2 analyst':0, manager:1, admin:1 }
     }
 };
@@ -258,7 +255,7 @@ async function loadPermissions() {
         const res = await fetch('/admin/permissions');
         const data = await res.json();
         if (data.permissions) {
-            currentPermissions = data.permissions;
+            currentPermissions = mergePermissions(data.permissions);
         } else {
             currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
         }
@@ -266,6 +263,20 @@ async function loadPermissions() {
         currentPermissions = deepCopy(DEFAULT_PERMISSIONS);
     }
     renderPermissionsTable(currentPermissions);
+}
+
+function mergePermissions(saved) {
+    const merged = deepCopy(DEFAULT_PERMISSIONS);
+    for (const [category, actions] of Object.entries(merged)) {
+        if (saved[category]) {
+            for (const [action, roles] of Object.entries(actions)) {
+                if (saved[category][action]) {
+                    merged[category][action] = saved[category][action];
+                }
+            }
+        }
+    }
+    return merged;
 }
 
 async function savePermissions() {

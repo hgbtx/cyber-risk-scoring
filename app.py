@@ -988,6 +988,23 @@ def ticket_confirm_resolution():
         conn.close()
         return jsonify({'error': 'Ticket must be resolved before confirming resolution'}), 400
 
+    # Role-based permission check
+    user = conn.execute('SELECT role FROM users WHERE id = ?', (uid,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'User not found'}), 403
+
+    perms = conn.execute('SELECT permissions_json FROM org_policies LIMIT 1').fetchone()
+    if perms and perms['permissions_json']:
+        policy = json.loads(perms['permissions_json'])
+        allowed = policy.get('myTickets', {}).get('accept ticket resolution', {}).get(user['role'], 0)
+    else:
+        allowed = 0
+
+    if not allowed:
+        conn.close()
+        return jsonify({'error': 'Your role does not have permission to accept resolutions'}), 403
+
     # The confirming user cannot be the same user who resolved the ticket
     accepted = conn.execute(
         'SELECT user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
