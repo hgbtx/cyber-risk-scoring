@@ -101,6 +101,7 @@ function renderTickets() {
     const canDelete = hasPermission('myTickets', 'delete tickets');
     const canComment = hasPermission('myTickets', 'comment tickets');
     const canFixComment = hasPermission('myTickets', 'fix comment tickets');
+    const canAcceptResolution = hasPermission('myTickets', 'accept resolution');
 
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
@@ -148,8 +149,8 @@ function renderTickets() {
             ${t.isResolved
                 ? `${t.accepted_by === currentUser?.username
                     ? `${canReopen ? `<button onclick="reopenTicket(${t.id})" style="padding: 4px 12px; background-color: #e67e22; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Reopen</button>` : ''}
-                    <button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>`
-                    : ''
+                    ${t.isConfirmed ? `<button onclick="archiveTicket(${t.id})" style="padding: 4px 12px; background-color: #78909c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Archive</button>` : ''}`
+                    : `${!t.isConfirmed && canAcceptResolution ? `<button onclick="acceptResolution(${t.id})" style="padding: 4px 12px; background-color: #00897b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Accept Resolution</button>` : ''}`
                 }`
                 : (t.isAccepted && (t.accepted_by === currentUser?.username || isCollaborator)
                 ? `${t.accepted_by === currentUser?.username
@@ -374,6 +375,9 @@ function reassignTicket(id) {
                 t.isResolved = false;
                 t.resolved = null;
                 t.resolved_by = null;
+                t.isConfirmed = false;
+                t.confirmed = null;
+                t.confirmed_by = null;
                 t.reassigned = data.reassigned;
                 t.reassigned_by = data.reassigned_by;
                 if (!t.activity) t.activity = [];
@@ -423,6 +427,36 @@ function resolveTicket(id) {
     .catch(e => console.error('Resolve ticket error:', e));
 }
 
+// ACCEPT RESOLUTION
+function acceptResolution(id) {
+    fetch('/db/ticket-confirm-resolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const t = tickets.find(t => t.id === id);
+            if (t) {
+                t.isConfirmed = true;
+                t.confirmed = data.confirmed;
+                t.confirmed_by = data.confirmed_by;
+                if (!t.activity) t.activity = [];
+                t.activity.push({
+                    action: 'Resolution Confirmed',
+                    action_by: data.confirmed_by,
+                    timestamp: data.confirmed
+                });
+            }
+            renderTickets();
+        } else {
+            alert(data.error || 'Failed to confirm resolution');
+        }
+    })
+    .catch(e => console.error('Accept resolution error:', e));
+}
+
 // REOPEN TICKET
 function reopenTicket(id) {
     fetch('/db/ticket-reopen', {
@@ -438,6 +472,9 @@ function reopenTicket(id) {
                 t.isResolved = false;
                 t.resolved = null;
                 t.resolved_by = null;
+                t.isConfirmed = false;
+                t.confirmed = null;
+                t.confirmed_by = null;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Reopened',

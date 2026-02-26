@@ -940,6 +940,11 @@ def ticket_reassign():
         (ticket_id,)
     )
 
+    conn.execute(
+        'UPDATE confirmedResolutions SET isConfirmed = 0, confirmed = NULL WHERE ticket_id = ?',
+        (ticket_id,)
+    )
+
     # Log the reassignment
     conn.execute(
         'INSERT INTO reassignedTickets (ticket_id, user_id, reassigned) VALUES (?, ?, ?)',
@@ -956,6 +961,67 @@ def ticket_reassign():
     return jsonify({
         'success': True, 'ticket_id': ticket_id,
         'reassigned': reassigned_ts, 'reassigned_by': username
+    })
+
+#---CONFIRM RESOLUTION---
+@app.route('/db/ticket-confirm-resolution', methods=['POST'])
+@login_required
+def ticket_confirm_resolution():
+    uid = get_current_user_id()
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    conn = get_db()
+    ticket = conn.execute('SELECT id, user_id FROM tickets WHERE id = ?', (ticket_id,)).fetchone()
+    if not ticket:
+        conn.close()
+        return jsonify({'error': 'Ticket not found'}), 404
+
+    # Must be resolved first
+    resolved = conn.execute(
+        'SELECT isResolved FROM resolvedTickets WHERE ticket_id = ? AND isResolved = 1', (ticket_id,)
+    ).fetchone()
+    if not resolved:
+        conn.close()
+        return jsonify({'error': 'Ticket must be resolved before confirming resolution'}), 400
+
+    # The confirming user cannot be the same user who resolved the ticket
+    accepted = conn.execute(
+        'SELECT user_id FROM acceptedTickets WHERE ticket_id = ? AND isAccepted = 1', (ticket_id,)
+    ).fetchone()
+    if accepted and accepted['user_id'] == uid:
+        conn.close()
+        return jsonify({'error': 'The resolver cannot confirm their own resolution'}), 403
+
+    # Check if already confirmed
+    existing = conn.execute(
+        'SELECT id FROM confirmedResolutions WHERE ticket_id = ? AND isConfirmed = 1', (ticket_id,)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Resolution already confirmed'}), 409
+
+    confirmed_ts = datetime.now().strftime('%m/%d/%Y, %I:%M:%S %p')
+    username = conn.execute('SELECT username FROM users WHERE id = ?', (uid,)).fetchone()['username']
+
+    conn.execute(
+        'INSERT INTO confirmedResolutions (ticket_id, user_id, confirmed, isConfirmed) VALUES (?, ?, ?, 1)',
+        (ticket_id, uid, confirmed_ts)
+    )
+
+    conn.execute(
+        'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
+        (ticket_id, uid, 'Resolution Confirmed', confirmed_ts)
+    )
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'success': True, 'ticket_id': ticket_id,
+        'confirmed': confirmed_ts, 'confirmed_by': username
     })
 
 #---COMMENT TICKET---
@@ -1135,6 +1201,11 @@ def ticket_reopen():
         (ticket_id,)
     )
 
+    conn.execute(
+        'UPDATE confirmedResolutions SET isConfirmed = 0, confirmed = NULL WHERE ticket_id = ?',
+        (ticket_id,)
+    )
+
     # Log activity
     conn.execute(
         'INSERT INTO ticketActivity (ticket_id, user_id, action, timestamp) VALUES (?, ?, ?, ?)',
@@ -1212,14 +1283,16 @@ def ticket_archive():
 def load_tickets():
     conn = get_db()
     rows = conn.execute('''
-        SELECT tickets.*, users.username AS creator_email,
+        SELECT tickets.*, users.username AS creator_username,
             resolvedTickets.resolved AS rt_resolved,
             resolvedTickets.isResolved AS rt_isResolved,
             acceptedTickets.accepted AS at_accepted,
             acceptedTickets.isAccepted AS at_isAccepted,
-            acceptors.username AS accepted_by_email,
+            acceptors.username AS accepted_by_username,
             archivedTickets.archived AS at_archived,
             archivedTickets.isArchived AS at_isArchived,
+            confirmedResolutions.confirmed AS cr_confirmed,
+            confirmedResolutions.isConfirmed AS cr_isConfirmed,
             statusTickets.status AS st_status
         FROM tickets
         JOIN users ON tickets.user_id = users.id
@@ -1227,6 +1300,7 @@ def load_tickets():
         LEFT JOIN acceptedTickets ON acceptedTickets.ticket_id = tickets.id AND acceptedTickets.isAccepted = 1
         LEFT JOIN users AS acceptors ON acceptedTickets.user_id = acceptors.id
         LEFT JOIN archivedTickets ON archivedTickets.ticket_id = tickets.id
+        LEFT JOIN confirmedResolutions ON confirmedResolutions.ticket_id = tickets.id
         LEFT JOIN statusTickets ON statusTickets.ticket_id = tickets.id
     ''').fetchall()
 
@@ -1276,7 +1350,7 @@ def load_tickets():
 
         # Fetch collaborators per ticket
         collab_rows = conn.execute('''
-            SELECT ticketCollaborators.ticket_id, users.username AS collaborator_email
+            SELECT ticketCollaborators.ticket_id, users.username AS collaborator_username
             FROM ticketCollaborators
             JOIN users ON ticketCollaborators.user_id = users.id
         ''').fetchall()
@@ -1286,13 +1360,13 @@ def load_tickets():
             tid = c['ticket_id']
             if tid not in collab_map:
                 collab_map[tid] = []
-            collab_map[tid].append(c['collaborator_email'])
+            collab_map[tid].append(c['collaborator_username'])
 
     conn.close()
     return jsonify([{
         'id': r['id'],
         'user_id': r['user_id'],
-        'creator_email': r['creator_email'],
+        'creator_username': r['creator_username'],
         'description': r['description'],
         'feature': r['feature'],
         'created': r['created'],
@@ -1300,14 +1374,16 @@ def load_tickets():
         'isResolved': bool(r['rt_isResolved']) if r['rt_isResolved'] is not None else bool(r['isResolved']),
         'accepted': r['at_accepted'] if r['at_isAccepted'] else None,
         'isAccepted': bool(r['at_isAccepted']) if r['at_isAccepted'] is not None else False,
-        'accepted_by': r['accepted_by_email'] if r['at_isAccepted'] else None,
-        'resolved_by': r['accepted_by_email'] if r['rt_isResolved'] else None,
+        'accepted_by': r['accepted_by_username'] if r['at_isAccepted'] else None,
+        'resolved_by': r['accepted_by_username'] if r['rt_isResolved'] else None,
         'isArchived': bool(r['at_isArchived']) if r['at_isArchived'] is not None else False,
         'archived': r['at_archived'] if r['at_isArchived'] else None,
         'comments': comments_map.get(r['id'], []),
         'activity': activity_map.get(r['id'], []),
         'status': r['st_status'] or 'Open',
-        'collaborators': collab_map.get(r['id'], [])
+        'collaborators': collab_map.get(r['id'], []),
+        'isConfirmed': bool(r['cr_isConfirmed']),
+        'confirmed': r['cr_confirmed'],
     } for r in rows])
 
 #---TICKET STATS---

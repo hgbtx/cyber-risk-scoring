@@ -114,6 +114,16 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS confirmedResolutions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            confirmed TEXT,
+            isConfirmed INTEGER DEFAULT 0,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS deletedTickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id INTEGER NOT NULL,
