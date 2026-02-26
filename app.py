@@ -795,7 +795,7 @@ def ticket_delete():
     conn.execute('DELETE FROM acceptedTickets WHERE ticket_id = ?', (ticket_id,))
     conn.execute('DELETE FROM resolvedTickets WHERE ticket_id = ?', (ticket_id,))
     conn.execute('DELETE FROM archivedTickets WHERE ticket_id = ?', (ticket_id,))
-    conn.execute('DELETE FROM ticketStatus WHERE ticket_id = ?', (ticket_id,))
+    conn.execute('DELETE FROM statusTickets WHERE ticket_id = ?', (ticket_id,))
     conn.execute('DELETE FROM tickets WHERE id = ?', (ticket_id,))
 
     conn.commit()
@@ -1202,7 +1202,7 @@ def ticket_reopen():
 
         # Reset status to In Progress
         conn.execute(
-            'UPDATE ticketStatus SET status = ? WHERE ticket_id = ?',
+            'UPDATE statusTickets SET status = ? WHERE ticket_id = ?',
             ('In Progress', ticket_id)
         )
 
