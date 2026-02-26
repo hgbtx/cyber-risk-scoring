@@ -970,6 +970,7 @@ def ticket_confirm_resolution():
     uid = get_current_user_id()
     data = request.json or {}
     ticket_id = data.get('ticket_id')
+    is_resolved = data.get('isResolved', 0)
 
     if not ticket_id:
         return jsonify({'error': 'ticket_id is required'}), 400
