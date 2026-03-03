@@ -140,7 +140,7 @@ Open → In Progress → Resolved → Archived
 
 - The ticket owner (user who created the ticket) must be a different user than the ticket acceptor (user who accepted the ticket)
 - A user cannot accept a ticket more than once, therefore a reassigned ticket cannot be accepted by a user that has previously accepted that ticket
-- if a user resolves a ticket, that user cannot also accept resolution of the ticket
+- If a user resolves a ticket, that user cannot also accept resolution of the ticket
 - Mentions in comments (`@username`) auto-add collaborators
 
 ## Project Structure

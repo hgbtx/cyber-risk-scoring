@@ -110,7 +110,7 @@ def scheduled_rescan():
                 conn.execute(
                     'UPDATE assets SET cveData = ?, last_scanned = ? WHERE cpeName = ? AND org_id = 1',
                     (json.dumps({'vulnerabilities': new_vulns, 'count': len(new_vulns), 'title': old_cve_data.get('title', cpe_name)}),
-                     datetime.now().isoformat(), cpe_name))
+                    datetime.now().isoformat(), cpe_name))
 
                 tickets_created = 0
                 if auto_ticket and new_findings:
@@ -142,15 +142,15 @@ def scheduled_rescan():
 
                 conn.execute(
                     '''INSERT INTO scan_history (org_id, cpe_name, scan_type, new_cve_count, total_cve_count,
-                       tickets_created, started_at, completed_at, status)
-                       VALUES (1, ?, 'scheduled', ?, ?, ?, ?, ?, 'completed')''',
+                    tickets_created, started_at, completed_at, status)
+                    VALUES (1, ?, 'scheduled', ?, ?, ?, ?, ?, 'completed')''',
                     (cpe_name, len(new_findings), len(new_vulns), tickets_created,
-                     started_at, datetime.now().isoformat()))
+                    started_at, datetime.now().isoformat()))
 
             except Exception as e:
                 conn.execute(
                     '''INSERT INTO scan_history (org_id, cpe_name, scan_type, started_at, completed_at, status, error_message)
-                       VALUES (1, ?, 'scheduled', ?, ?, 'failed', ?)''',
+                    VALUES (1, ?, 'scheduled', ?, ?, 'failed', ?)''',
                     (cpe_name, started_at, datetime.now().isoformat(), str(e)))
 
         conn.commit()
@@ -182,9 +182,9 @@ def log_audit(action, resource_type=None, resource_id=None, details=None, user_i
         conn = get_db()
         conn.execute(
             '''INSERT INTO audit_log (org_id, user_id, username, action, resource_type, resource_id, details, ip_address)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
             (1, uid, uname, action, resource_type, resource_id,
-             json.dumps(details) if details else None, ip))
+            json.dumps(details) if details else None, ip))
         conn.commit()
         conn.close()
     except Exception:
@@ -218,10 +218,10 @@ def create_notification(user_id, notif_type, title, message='', link='',
             return
         conn.execute(
             '''INSERT INTO notifications
-               (org_id, user_id, type, title, message, link, resource_type, resource_id)
-               VALUES (1, ?, ?, ?, ?, ?, ?, ?)''',
+            (org_id, user_id, type, title, message, link, resource_type, resource_id)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?)''',
             (user_id, notif_type, title, message or '', link or '',
-             resource_type, resource_id)
+            resource_type, resource_id)
         )
         if own_conn:
             conn.commit()
@@ -233,7 +233,7 @@ def create_notification(user_id, notif_type, title, message='', link='',
 
 
 def notify_ticket_participants(ticket_id, exclude_user_id, notif_type, title,
-                               message='', link='', conn=None):
+                            message='', link='', conn=None):
     """Notify ticket creator + acceptor + collaborators, excluding the acting user."""
     own_conn = conn is None
     try:
@@ -463,7 +463,7 @@ def login():
         if fails >= 5:
             lock_until = (datetime.now() + timedelta(minutes=15)).isoformat()
             conn.execute('UPDATE users SET failed_login_count = ?, locked_until = ? WHERE id = ?',
-                         (fails, lock_until, user['id']))
+                        (fails, lock_until, user['id']))
         else:
             conn.execute('UPDATE users SET failed_login_count = ? WHERE id = ?', (fails, user['id']))
         conn.commit()
@@ -501,7 +501,7 @@ def login():
             session.permanent = True
             conn.close()
             log_audit('LOGIN_SUCCESS', 'user', str(user['id']),
-                      {'username': username, 'mfa_setup_required': True})
+                    {'username': username, 'mfa_setup_required': True})
             return jsonify({
                 'success': True, 'mfa_setup_required': True,
                 'user': {'id': user['id'], 'username': user['username'], 'role': user['role']}
@@ -662,7 +662,7 @@ def totp_verify():
         if code_hash in stored_codes:
             stored_codes.remove(code_hash)
             conn.execute('UPDATE users SET backup_codes = ? WHERE id = ?',
-                         (json.dumps(stored_codes), user['id']))
+                        (json.dumps(stored_codes), user['id']))
             conn.commit()
             session.pop('mfa_pending', None)
             session.pop('mfa_user_id', None)
@@ -673,7 +673,7 @@ def totp_verify():
             session.permanent = True
             conn.close()
             log_audit('LOGIN_SUCCESS', 'user', str(user['id']),
-                      {'username': user['username'], 'mfa': True, 'backup_code': True})
+                    {'username': user['username'], 'mfa': True, 'backup_code': True})
             return jsonify({'success': True, 'user': {'id': user['id'], 'username': user['username'], 'role': user['role']}})
 
     # Failed
@@ -681,7 +681,7 @@ def totp_verify():
     if fails >= 5:
         lock_until = (datetime.now() + timedelta(minutes=15)).isoformat()
         conn.execute('UPDATE users SET failed_login_count = ?, locked_until = ? WHERE id = ?',
-                     (fails, lock_until, user['id']))
+                    (fails, lock_until, user['id']))
         conn.commit()
         session.clear()
         conn.close()
@@ -1068,8 +1068,8 @@ def save_assets():
                     tags = COALESCE(excluded.tags, assets.tags)
                 WHERE assets.org_id = excluded.org_id
             ''', (a['cpeName'], org_id, uid, a.get('title', ''),
-                  json.dumps(a.get('cpeData', {})), json.dumps(a.get('cveData', {})),
-                  a.get('criticality', 3), json.dumps(a.get('tags', []))))
+                json.dumps(a.get('cpeData', {})), json.dumps(a.get('cveData', {})),
+                a.get('criticality', 3), json.dumps(a.get('tags', []))))
 
         conn.commit()
         log_audit('ASSETS_SAVED', 'asset', None, {'count': len(assets)})
@@ -1098,7 +1098,7 @@ def update_asset_properties():
     org_id = org_row['org_id']
 
     asset = conn.execute('SELECT cpeName FROM assets WHERE cpeName = ? AND org_id = ?',
-                         (cpe_name, org_id)).fetchone()
+                        (cpe_name, org_id)).fetchone()
     if not asset:
         conn.close()
         return jsonify({'error': 'Asset not found'}), 404
@@ -1125,7 +1125,7 @@ def update_asset_properties():
     conn.commit()
     conn.close()
     log_audit('ASSET_PROPERTIES_UPDATED', 'asset', cpe_name,
-              {'criticality': data.get('criticality'), 'tags': data.get('tags')})
+            {'criticality': data.get('criticality'), 'tags': data.get('tags')})
     return jsonify({'success': True})
 
 #---ARCHIVE ASSETS---
@@ -1292,17 +1292,17 @@ def save_tickets():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id)
                 DO UPDATE SET description=excluded.description, feature=excluded.feature,
-                              isResolved=excluded.isResolved, cve_id=excluded.cve_id, cpe_name=excluded.cpe_name,
-                              sla_tier=COALESCE(tickets.sla_tier, excluded.sla_tier),
-                              sla_deadline=COALESCE(tickets.sla_deadline, excluded.sla_deadline)
+                            isResolved=excluded.isResolved, cve_id=excluded.cve_id, cpe_name=excluded.cpe_name,
+                            sla_tier=COALESCE(tickets.sla_tier, excluded.sla_tier),
+                            sla_deadline=COALESCE(tickets.sla_deadline, excluded.sla_deadline)
             ''', (tid, uid, t['description'], t['feature'], t['created'], is_resolved,
-                  t.get('cve_id'), t.get('cpe_name'), 'Standard', sla_deadline))
+                t.get('cve_id'), t.get('cpe_name'), 'Standard', sla_deadline))
         else:
             sla_deadline = calculate_sla_deadline(t['created'], 'Standard', policy)
             cursor = conn.execute(
                 'INSERT INTO tickets (user_id, description, feature, created, isResolved, cve_id, cpe_name, sla_tier, sla_deadline) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (uid, t['description'], t['feature'], t['created'], is_resolved,
-                 t.get('cve_id'), t.get('cpe_name'), 'Standard', sla_deadline)
+                t.get('cve_id'), t.get('cpe_name'), 'Standard', sla_deadline)
             )
             incoming_ids.add(cursor.lastrowid)
 
@@ -2108,8 +2108,8 @@ def tickets_by_cve():
     cpe_name = request.args.get('cpe_name', '')
     conn = get_db()
     query = '''SELECT t.id, t.description, t.feature, t.created, t.isResolved, t.cve_id, t.cpe_name,
-               COALESCE(st.status, 'Open') AS status
-               FROM tickets t LEFT JOIN statusTickets st ON st.ticket_id = t.id WHERE 1=1'''
+            COALESCE(st.status, 'Open') AS status
+            FROM tickets t LEFT JOIN statusTickets st ON st.ticket_id = t.id WHERE 1=1'''
     params = []
     if cve_id:
         query += ' AND t.cve_id = ?'
@@ -2299,9 +2299,9 @@ def ticket_stats():
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
         LEFT JOIN resolvedTickets r ON r.ticket_id = t.id
         WHERE t.sla_deadline IS NOT NULL
-          AND t.sla_deadline < ?
-          AND COALESCE(a.isArchived, 0) = 0
-          AND COALESCE(r.isResolved, 0) = 0
+        AND t.sla_deadline < ?
+        AND COALESCE(a.isArchived, 0) = 0
+        AND COALESCE(r.isResolved, 0) = 0
     ''', (now_iso,)).fetchone()['c']
 
     conn.close()
@@ -2334,14 +2334,14 @@ def sla_report():
 
     active = conn.execute('''
         SELECT t.id, t.sla_tier, t.sla_deadline, t.created,
-               COALESCE(s.status, 'Open') AS status
+            COALESCE(s.status, 'Open') AS status
         FROM tickets t
         LEFT JOIN statusTickets s ON s.ticket_id = t.id
         LEFT JOIN archivedTickets a ON a.ticket_id = t.id
         LEFT JOIN resolvedTickets r ON r.ticket_id = t.id
         WHERE t.sla_deadline IS NOT NULL
-          AND COALESCE(a.isArchived, 0) = 0
-          AND COALESCE(r.isResolved, 0) = 0
+        AND COALESCE(a.isArchived, 0) = 0
+        AND COALESCE(r.isResolved, 0) = 0
     ''').fetchall()
 
     resolved = conn.execute('''
@@ -2769,9 +2769,9 @@ def review_risk_decision():
     log_audit('RISK_DECISION_REVIEWED', 'risk_decision', str(decision_id))
     return jsonify({'success': True})
 
-#=====================
+#=======================
 # FALSE POSITIVE REVIEW
-#=====================
+#=======================
 
 @app.route('/admin/false-positives', methods=['GET'])
 @login_required
