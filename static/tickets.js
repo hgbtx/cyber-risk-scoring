@@ -44,6 +44,25 @@ function formatMentions(text) {
     return escapeHtml(text).replace(/@(\w+)/g, '<span style="color: #e67e22; font-weight: 600;">@$1</span>');
 }
 
+// SLA BADGE HELPER
+function getSlaInfo(ticket) {
+    if (!ticket.sla_deadline) return null;
+    const deadline = new Date(ticket.sla_deadline);
+    const now = new Date();
+    const created = new Date(ticket.created);
+    const totalMs = deadline - created;
+    const remainingMs = deadline - now;
+    const remainingDays = Math.ceil(remainingMs / 86400000);
+    const pctRemaining = totalMs > 0 ? remainingMs / totalMs : 1;
+
+    if (remainingMs < 0) {
+        return { label: `SLA Breached (${Math.abs(remainingDays)}d overdue)`, cssClass: 'sla-breached', tier: ticket.sla_tier };
+    } else if (pctRemaining < 0.25) {
+        return { label: `SLA: ${remainingDays}d left`, cssClass: 'sla-approaching', tier: ticket.sla_tier };
+    }
+    return { label: `SLA: ${remainingDays}d left`, cssClass: 'sla-ok', tier: ticket.sla_tier };
+}
+
 // RENDER TICKETS
 function renderTickets() {
     let visibleTickets;
@@ -106,6 +125,14 @@ function renderTickets() {
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
         const isCollaborator = (t.collaborators || []).includes(currentUser?.email);
+        const cveLink = t.cve_id
+            ? '<div style="margin: 4px 0; font-size: 0.82em;">'
+                + '<span style="color: #4a90d9; cursor: pointer; text-decoration: underline;"'
+                + ' onclick="navigateToCve(\'' + escapeHtml(t.cve_id) + '\', \'' + escapeHtml(t.cpe_name || '') + '\')"'
+                + ' title="View CVE details">' + escapeHtml(t.cve_id) + '</span>'
+                + (t.cpe_name ? '<span style="color: #888;"> on ' + escapeHtml(t.cpe_name) + '</span>' : '')
+                + '</div>'
+            : '';
         const div = document.createElement('div');
         div.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 10px; max-width: 600px; background:' + (t.resolved ? '#e8f5e9' : '#fff');
         div.innerHTML = `
@@ -125,6 +152,11 @@ function renderTickets() {
                     t.status === 'In Progress' ? '#1565c0' :
                     t.status === 'Open' ? '#fff3e0' : '#f5f5f5'
                 }; border-radius: 3px; font-size: 0.9em; font-weight: 600; cursor: pointer;" onclick="filterByField('status', '${escapeHtml(t.status || 'Open')}')" title="Filter by status">${escapeHtml(t.status || 'Open')}</span>
+                ${(() => {
+                    const sla = getSlaInfo(t);
+                    if (!sla || t.isResolved || t.isArchived) return '';
+                    return `<span class="sla-badge ${sla.cssClass}" title="${escapeHtml(sla.tier)} tier">${escapeHtml(sla.label)}</span>`;
+                })()}
             </div>
         </div>
     
@@ -136,6 +168,7 @@ function renderTickets() {
     
         <!-- Description -->
         <p style="margin: 8px 0;">${escapeHtml(t.description)}</p>
+        ${cveLink}
     
         <!-- Buttons row -->
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -214,7 +247,7 @@ function renderTickets() {
 function statusTicket(id, status) {
     fetch('/db/ticket-status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id, status: status })
     })
     .then(r => r.json())
@@ -242,7 +275,7 @@ function statusTicket(id, status) {
 function acceptTicket(id) {
     fetch('/db/ticket-acceptance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
@@ -288,7 +321,7 @@ function submitComment(id) {
 
     fetch('/db/ticket-comment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id, comment_description: desc })
     })
     .then(r => r.json())
@@ -329,7 +362,7 @@ function cancelComment(id) {
 function fixComment(ticketId, commentId) {
     fetch('/db/ticket-comment-fix', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: ticketId, comment_id: commentId })
     })
     .then(r => r.json())
@@ -361,7 +394,7 @@ function fixComment(ticketId, commentId) {
 function reassignTicket(id) {
     fetch('/db/ticket-reassign', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
@@ -400,7 +433,7 @@ function reassignTicket(id) {
 function resolveTicket(id) {
     fetch('/db/ticket-resolution', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id, isResolved: 1 })
     })
     .then(r => r.json())
@@ -431,7 +464,7 @@ function resolveTicket(id) {
 function acceptResolution(id) {
     fetch('/db/ticket-confirm-resolution', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
@@ -461,7 +494,7 @@ function acceptResolution(id) {
 function reopenTicket(id) {
     fetch('/db/ticket-reopen', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
@@ -495,7 +528,7 @@ function reopenTicket(id) {
 function archiveTicket(id) {
     fetch('/db/ticket-archive', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id, isArchived: 1 })
     })
     .then(r => r.json())
@@ -525,7 +558,7 @@ function archiveTicket(id) {
 function restoreTicket(id) {
     fetch('/db/ticket-archive', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id, isArchived: 0 })
     })
     .then(r => r.json())
@@ -556,7 +589,7 @@ function deleteTicket(id) {
     if (!confirm('Delete this ticket? This cannot be undone.')) return;
     fetch('/db/delete-ticket', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
     })
     .then(r => r.json())
@@ -740,6 +773,43 @@ function renderTicketDashboard(stats) {
         html += '<div style="margin-left:12px; font-size:0.82em; color:#888;">';
         html += oldest.map(t => `#${t.id} — ${t.days}d (${t.status})`).join(' &middot; ');
         html += '</div>';
+    }
+
+    // --- Operational Metrics ---
+    if (stats.metrics) {
+        const m = stats.metrics;
+        html += '<div style="margin-top:12px; padding-top:10px; border-top:1px solid #eee;">';
+        html += '<div style="font-weight:600; font-size:0.85em; color:#57534E; margin-bottom:6px;">Operational Metrics</div>';
+        html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 16px;">';
+
+        const mttaDisplay = m.mtta_hours != null
+            ? (m.mtta_hours < 24 ? `${m.mtta_hours}h` : `${(m.mtta_hours / 24).toFixed(1)}d`)
+            : 'N/A';
+        html += `<div><strong>MTTA:</strong> ${mttaDisplay}</div>`;
+
+        const mttrDisplay = m.mttr_hours != null
+            ? (m.mttr_hours < 24 ? `${m.mttr_hours}h` : `${(m.mttr_hours / 24).toFixed(1)}d`)
+            : 'N/A';
+        html += `<div><strong>MTTR:</strong> ${mttrDisplay}</div>`;
+
+        html += `<div><strong>Reopen Rate:</strong> ${m.reopen_rate}% (${m.reopened_count}/${m.total_resolved_for_reopen})</div>`;
+
+        if (m.aging_buckets) {
+            const b = m.aging_buckets;
+            html += `<div><strong>Backlog:</strong> ${b['0-7d']}/${b['8-30d']}/${b['31-90d']}/${b['90d+']} <small style="color:#999;">(7d/30d/90d/90d+)</small></div>`;
+        }
+
+        html += '</div></div>';
+    }
+
+    // SLA breach summary
+    if (stats.sla_breached > 0) {
+        html += `<div style="margin-bottom:8px;">
+            <strong style="color:#c01e19;">SLA Breaches:</strong>
+            <span style="color:#c01e19;font-weight:600;">${stats.sla_breached} active ticket${stats.sla_breached !== 1 ? 's' : ''} past deadline</span>
+        </div>`;
+    } else if (stats.sla_breached === 0) {
+        html += `<div style="margin-bottom:8px;"><strong>SLA Status:</strong> <span style="color:#2e7d32;">All tickets within deadline</span></div>`;
     }
 
     detailsRow.innerHTML = html;

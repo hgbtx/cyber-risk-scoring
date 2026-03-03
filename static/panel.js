@@ -8,9 +8,13 @@ document.getElementById('toggleRightPanel').addEventListener('click', () => {
     const btn = document.getElementById('toggleRightPanel');
     const isCollapsed = panel.classList.toggle('collapsed');
     btn.innerHTML = isCollapsed ? '&#9664;' : '&#9654;';
-    if (epssChartInstance) {
-        setTimeout(() => epssChartInstance.resize(), 350);
-    }
+    setTimeout(() => {
+        for (const id of chartLayout) {
+            if (!id) continue;
+            const c = document.getElementById(id);
+            if (c) { const inst = Chart.getChart(c); if (inst) inst.resize(); }
+        }
+    }, 350);
     setTimeout(updateChartFullscreenBtn, 50);
 });
 

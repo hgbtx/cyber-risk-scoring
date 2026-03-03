@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Bar</title>
+    <title>vulnscore, m.a.r.s.</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.8.1/nouislider.min.css">
@@ -32,6 +33,30 @@
         <button onclick="handleOtpLogin()" style="width:100%;padding:10px;font-size:15px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;">Verify</button>
         <div style="margin-top:14px;text-align:center;font-size:0.9em;color:#666;">Already set your password? <a onclick="showLoginForm()" style="color:#be7a15;cursor:pointer;">Sign In</a></div>
         </div>
+        <div id="totpForm" style="display:none;">
+        <h2 style="margin-top:0;">Two-Factor Authentication</h2>
+        <p style="font-size:0.85em;color:#666;">Enter the 6-digit code from your authenticator app.</p>
+        <div style="margin-bottom:14px;">
+            <input type="text" id="totpCode" placeholder="000000" maxlength="6" autocomplete="one-time-code"
+                style="width:100%;padding:10px 12px;font-size:18px;letter-spacing:8px;text-align:center;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;">
+        </div>
+        <button onclick="handleTotpVerify()" style="width:100%;padding:10px;font-size:15px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;">Verify</button>
+        <div style="margin-top:14px;text-align:center;font-size:0.85em;">
+            <a onclick="showBackupCodeForm()" style="color:#be7a15;cursor:pointer;">Use a backup code instead</a>
+        </div>
+        </div>
+        <div id="backupCodeForm" style="display:none;">
+        <h2 style="margin-top:0;">Backup Code</h2>
+        <p style="font-size:0.85em;color:#666;">Enter one of your backup codes.</p>
+        <div style="margin-bottom:14px;">
+            <input type="text" id="backupCode" placeholder="Enter backup code"
+                style="width:100%;padding:10px 12px;font-size:14px;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;">
+        </div>
+        <button onclick="handleBackupCodeVerify()" style="width:100%;padding:10px;font-size:15px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;">Verify</button>
+        <div style="margin-top:14px;text-align:center;font-size:0.85em;">
+            <a onclick="showTotpForm()" style="color:#be7a15;cursor:pointer;">Use authenticator code instead</a>
+        </div>
+        </div>
         <div id="setPasswordForm" style="display:none;">
         <h2 style="margin-top:0;">Create Your Password</h2>
         <div style="margin-bottom:14px;"><label style="font-size:0.85em;font-weight:600;color:#57534E;">New Password</label><br>
@@ -48,44 +73,53 @@
     <div class="tab-header">
         <button class="tab-button active" data-tab="search">Search</button>
         <button class="tab-button" data-tab="cve">Asset Directory</button>
-        <button class="tab-button" data-tab="charts">Charts</button>
+        <button class="tab-button" data-tab="charts">myCharts</button>
         <button class="tab-button" data-tab="tickets">myTickets</button>
         <button class="tab-button" data-tab="admin">Admin</button>
     </div>
     <div style="display:flex; align-items:center; gap:12px; white-space:nowrap;">
+        <!-- Notification Bell -->
+        <div id="notifBell" style="position:relative;cursor:pointer;" onclick="toggleNotifPanel()">
+            <i class="fa-solid fa-bell" style="font-size:1.1em;"></i>
+            <span id="notifBadge" style="display:none;position:absolute;top:-6px;right:-8px;background:#c01e19;color:white;font-size:0.65em;font-weight:700;padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;line-height:1.3;"></span>
+        </div>
         <span id="userUsername"></span>
         <span id="userRole" style="background:#d9af6f;color:#57534E;padding:1px 8px;border-radius:3px;font-weight:600;font-size:0.9em;text-transform:uppercase;"></span>
+        <span id="mfaBadge" style="display:none;cursor:pointer;font-size:0.85em;" title="Two-Factor Authentication">
+            <i class="fa-solid fa-shield-halved"></i>
+        </span>
         <button onclick="handleLogout()" style="background:none;border:1px solid #999;color:#ccc;padding:2px 10px;border-radius:3px;cursor:pointer;">Sign Out</button>
     </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notifPanel" style="display:none;position:fixed;top:42px;right:20px;width:380px;max-height:480px;background:white;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:600;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #eee;background:#fafafa;">
+            <h4 style="margin:0;font-size:0.95em;color:#57534E;">Notifications</h4>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <a href="#" onclick="markAllNotifsRead(); return false;" style="font-size:0.8em;color:#be7a15;text-decoration:none;">Mark all read</a>
+                <a href="#" onclick="openNotifPreferences(); return false;" style="font-size:0.8em;color:#57534E;text-decoration:none;" title="Preferences"><i class="fa-solid fa-gear"></i></a>
+            </div>
+        </div>
+        <div id="notifList" style="overflow-y:auto;max-height:380px;"></div>
+    </div>
+
+    <!-- Notification Preferences Modal -->
+    <div id="notifPrefsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;justify-content:center;align-items:center;">
+        <div style="background:white;border-radius:8px;padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;">Notification Preferences</h3>
+                <span onclick="document.getElementById('notifPrefsModal').style.display='none'" style="cursor:pointer;font-size:1.3em;">&times;</span>
+            </div>
+            <div id="notifPrefsContainer"></div>
+        </div>
     </div>
 
     <div id="appContainer" class="main-layout" style="display:none; margin-top:42px;">
         <!-- Left Panel -->
         <div class="left-panel-container">
-            <!--Drop Zone-->
-            <div class="drop-zone" id="dropZone" data-permission-category="Search" data-permission-action="drag and drop to Assets folder">
-                <h3>Assets</h3>
-                <div id="selectedItems">
-                    <p id="placeholder" style="color: #999; font-style: italic;">Drag and drop your assets here...</p>
-                </div>
-                <button id="addAssetsBtn" style="display: none;">Add Assets</button>
-            </div>
-            <!--CVE Counter-->
-            <div class="cveCounts-container" data-permission-category="Search" data-permission-action="drag and drop to Assets folder">
-                <div id="cveCounts">0 CVEs found</div>
-            </div>
-            
             <!--Chart Configuration-->
             <div id="chartConfig" class="chart-config">
-                <div class="config-row">
-                    <label for="riskFormulaSelect">Risk Formula</label>
-                    <select id="riskFormulaSelect">
-                        <option value="weighted_average" selected>Weighted Average</option>
-                        <option value="multiplicative">Multiplicative</option>
-                        <option value="max">Max Score</option>
-                        <option value="simple_mean">Simple Mean</option>
-                    </select>
-                </div>
                 <div class="config-row">
                     <label for="aggMethodSelect">Aggregation Method</label>
                     <select id="aggMethodSelect">
@@ -99,6 +133,9 @@
                     <label for="riskThresholdSlider">Risk Threshold: <span id="thresholdValue">7.0</span></label>
                     <input type="range" id="riskThresholdSlider" min="0" max="10" step="0.5" value="7">
                 </div>
+                <div class="config-row" id="riskToleranceDisplayRow">
+                    <div id="riskToleranceDisplay" style="font-size:0.85em;padding:4px 0;"></div>
+                </div>
                 <div class="config-row">
                     <label>Published Date</label>
                     <div style="padding: 10px 6px 0; min-width: 180px;">
@@ -109,6 +146,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="chartPalette" class="chart-palette"></div>
             </div>
         </div>
 
@@ -274,6 +312,15 @@
                                 </span>
                             </div>
                         </div>
+                        <div id="searchBulkBar" class="search-bulk-bar" style="display:none;">
+                            <label class="search-select-all">
+                                <input type="checkbox" id="selectAllResults">
+                                <span>Select All</span>
+                            </label>
+                            <button id="bulkAddToDirectory" class="bulk-add-btn" style="display:none;">
+                                + Add to Directory
+                            </button>
+                        </div>
                         <div id="resultsList"></div>
                         <div id="pagination" style="display: none; margin-top: 20px; text-align: center;">
                             <button id="prevPage" disabled>Previous</button>
@@ -285,17 +332,19 @@
                     </div>
                 </div>
 
-                <!--Charts Tab-->
+                <!--myCharts Tab-->
                 <div class="tab-panel" data-panel="charts">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2>Charts</h2>
+                        <h2>myCharts</h2>
                         <button id="chartFullscreenToggle" class="chart-fullscreen-btn" style="display: none;" title="Expand chart">&#x26F6;</button>
+                        <button id="chartDownloadPdfBtn" style="display:none; background:transparent; border:none; cursor:pointer; font-size:0.85em; color:#be7a15; padding:0;"
+                            data-permission-category="myCharts" data-permission-action="download PDF"
+                            onclick="downloadAllChartsPDF()">
+                            <i class="fa-solid fa-file-arrow-down"></i> Download PDF
+                        </button>
                     </div>
                     <p id="chartPlaceholder" style="color: #999; font-style: italic;">Add assets to generate charts.</p>
-                    <div style="position: relative; width: 100%;">
-                        <canvas id="epssChart" style="display: none;"></canvas>
-                        <canvas id="cvssHistogramChart" style="display: none; max-width: 600px;"></canvas>
-                    </div>
+                    <div id="chartDashboard" class="chart-grid"></div>
                 </div>
 
                 <!--CVE Tab-->
@@ -339,6 +388,8 @@
                                         <th data-sort="tags">Tags <span class="sort-arrow"></span></th>
                                         <th data-sort="cvss">CVSS <span class="sort-arrow"></span></th>
                                         <th data-sort="severity">Severity <span class="sort-arrow"></span></th>
+                                        <th>Ticket</th>
+                                        <th>Risk Response</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cveFolderBody"></tbody>
@@ -385,9 +436,14 @@
                         <!-- Workload + Resolution + Aging -->
                         <div id="dashDetailsRow" style="font-size: 0.88em; color: #57534E;"></div>
                     </div>
-                    <div style="margin-bottom: 15px; justify-content: space-between; display: flex; align-items: center; max-width: 600px;">
+                    <div style="margin-bottom: 15px; display: flex; align-items: center; max-width: 600px;">
                         <span id="createTicketBtn" style="cursor: pointer; color: #be7a15; font-size: 1.1em;" data-permission-category="myTickets" data-permission-action="create tickets">&#65291; Create New Ticket</span>
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                            <button data-permission-category="myTickets" data-permission-action="download ticket log"
+                                onclick="downloadAllTicketLogs()"
+                                style="background:transparent; border:none; cursor:pointer; font-size:0.85em; color:#57534E; padding:0;">
+                                <i class="fa-solid fa-download"></i> Download All Logs
+                            </button>
                             <select id="ticketSortSelect" onchange="renderTickets()" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; color: #57534E; cursor: pointer;">
                                 <option value="default">Sort: Default</option>
                                 <option value="newest">Sort: Most Recent</option>
@@ -409,13 +465,6 @@
                                 <label style="font-weight: 600; font-size: 0.85em; color: #57534E;">Related Feature</label>
                                 <select id="ticketFeature" style="width: 100%; padding: 8px 10px; font-size: 14px; border: 2px solid #ddd; border-radius: 4px; background: white;">
                                     <option value="" selected>— Select feature —</option>
-                                    <option value="Search">Search</option>
-                                    <option value="Charts">Charts</option>
-                                    <option value="Asset Directory">Asset Directory</option>
-                                    <option value="myTickets">myTickets</option>
-                                    <option value="Left Panel">Left Panel</option>
-                                    <option value="Right Panel">Right Panel</option>
-                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div style="display: flex; gap: 10px;">
@@ -436,9 +485,46 @@
                         <h3>Organization Policies</h3>
                         <div class="admin-policy-grid">
                             <div class="admin-field">
+                                <label for="orgName">Organization Name</label>
+                                <input type="text" id="orgName" placeholder="Enter organization name" style="width:220px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                            </div>
+                            <div class="admin-field">
                                 <label for="policyOtpExpiry">OTP Expiry (hours)</label>
                                 <input type="number" id="policyOtpExpiry" min="1" max="720" value="72" style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
                             </div>
+                            <div class="admin-field">
+                                <label for="policyMfaRequired">Require MFA for role</label>
+                                <select id="policyMfaRequired" style="width:220px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                                    <option value="">Not required</option>
+                                    <option value="5">Admin only</option>
+                                    <option value="4">Manager and above</option>
+                                    <option value="3">Tier 2 Analyst and above</option>
+                                    <option value="2">Tier 1 Analyst and above</option>
+                                    <option value="1">All users</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- SLA Policy (ID.RA-06) -->
+                        <div style="margin-top:16px;border-top:1px solid #eee;padding-top:14px;">
+                            <h4 style="margin:0 0 10px 0;color:#57534E;">SLA Deadlines (ID.RA-06)</h4>
+                            <div class="admin-policy-grid">
+                                <div class="admin-field">
+                                    <label><input type="checkbox" id="slaEnabled" style="accent-color:#be7a15;"> Enable SLA Tracking</label>
+                                </div>
+                                <div class="admin-field">
+                                    <label for="slaCriticalDays">Critical Resolution (days)</label>
+                                    <input type="number" id="slaCriticalDays" min="1" max="365" value="7"
+                                           style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                                </div>
+                                <div class="admin-field">
+                                    <label for="slaStandardDays">Standard Resolution (days)</label>
+                                    <input type="number" id="slaStandardDays" min="1" max="365" value="30"
+                                           style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                                </div>
+                            </div>
+                            <p style="font-size:0.8em;color:#888;margin:6px 0 0 0;">
+                                Critical tier: auto-generated tickets above score threshold. Standard tier: all other tickets.
+                            </p>
                         </div>
                         <button onclick="saveOrgPolicies()" class="admin-save-btn">Save Policies</button>
                         <span id="policyStatus" style="margin-left:12px;font-size:0.85em;color:#50b88e;"></span>
@@ -484,6 +570,154 @@
                             </thead>
                             <tbody id="adminUsersBody"></tbody>
                         </table>
+                    </div>
+
+                    <!-- Audit Log Section -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>Audit Log</h3>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
+                            <div>
+                                <label style="font-size:0.8em;font-weight:600;color:#57534E;">Action</label><br>
+                                <select id="auditFilterAction" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:0.85em;">
+                                    <option value="">All Actions</option>
+                                    <option value="LOGIN_SUCCESS">Login Success</option>
+                                    <option value="LOGIN_FAILED">Login Failed</option>
+                                    <option value="LOGOUT">Logout</option>
+                                    <option value="USER_CREATED">User Created</option>
+                                    <option value="USER_DELETED">User Deleted</option>
+                                    <option value="ROLE_CHANGED">Role Changed</option>
+                                    <option value="PERMISSION_DENIED">Permission Denied</option>
+                                    <option value="TICKET_CREATED">Ticket Created</option>
+                                    <option value="TICKET_DELETED">Ticket Deleted</option>
+                                    <option value="ASSET_SAVED">Asset Saved</option>
+                                    <option value="ASSET_DELETED">Asset Deleted</option>
+                                    <option value="RISK_TOLERANCE_UPDATED">Risk Tolerance Updated</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em;font-weight:600;color:#57534E;">User</label><br>
+                                <input type="text" id="auditFilterUser" placeholder="Username" style="padding:4px;border:1px solid #ccc;border-radius:4px;width:120px;font-size:0.85em;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em;font-weight:600;color:#57534E;">From</label><br>
+                                <input type="date" id="auditFilterFrom" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:0.85em;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em;font-weight:600;color:#57534E;">To</label><br>
+                                <input type="date" id="auditFilterTo" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:0.85em;">
+                            </div>
+                            <button onclick="loadAuditLog(1)" style="padding:4px 12px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Filter</button>
+                            <button onclick="exportAuditLog()" style="padding:4px 12px;background:#57534E;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;"><i class="fa-solid fa-download"></i> CSV</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="admin-users-table" id="auditLogTable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Resource</th>
+                                        <th>Details</th>
+                                        <th>IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="auditLogPagination" style="margin-top:10px;text-align:center;font-size:0.85em;"></div>
+                    </div>
+
+                    <!-- Scheduled Scanning Section -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>Scheduled Scanning</h3>
+                        <div class="admin-policy-grid">
+                            <div class="admin-field">
+                                <label>
+                                    <input type="checkbox" id="rescanEnabled" style="accent-color:#be7a15;"> Enable Scheduled Rescanning
+                                </label>
+                            </div>
+                            <div class="admin-field">
+                                <label for="rescanInterval">Rescan Interval</label>
+                                <select id="rescanInterval" style="padding:6px;border:2px solid #ddd;border-radius:4px;">
+                                    <option value="24">Every 24 hours</option>
+                                    <option value="48">Every 48 hours</option>
+                                    <option value="72">Every 72 hours</option>
+                                    <option value="168" selected>Weekly</option>
+                                </select>
+                            </div>
+                            <div class="admin-field">
+                                <label>
+                                    <input type="checkbox" id="autoTicketEnabled" style="accent-color:#be7a15;"> Auto-create tickets for new CVEs
+                                </label>
+                            </div>
+                            <div class="admin-field">
+                                <label for="autoTicketThreshold">Score Threshold (0-10)</label>
+                                <input type="number" id="autoTicketThreshold" min="0" max="10" step="0.5" value="7.0" style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+                            <button onclick="saveScanSettings()" class="admin-save-btn">Save Scan Settings</button>
+                            <button onclick="triggerRescanNow()" style="padding:8px 16px;background:#57534E;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Scan Now</button>
+                            <span id="scanSettingsStatus" style="font-size:0.85em;color:#50b88e;"></span>
+                        </div>
+                        <h4 style="margin-top:20px;">Scan History</h4>
+                        <div style="overflow-x:auto;">
+                            <table class="admin-users-table" id="scanHistoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Asset</th>
+                                        <th>Type</th>
+                                        <th>New CVEs</th>
+                                        <th>Total CVEs</th>
+                                        <th>Tickets Created</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scanHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Risk Tolerance Section (GV.RM-02) -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>Risk Tolerance</h3>
+                        <div id="riskToleranceAdmin">
+                            <div class="admin-policy-grid">
+                                <div class="admin-field">
+                                    <label for="riskToleranceThreshold">Org Risk Threshold (0-10)</label>
+                                    <input type="number" id="riskToleranceThreshold" min="0" max="10" step="0.5" value="7.0"
+                                           style="width:80px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                                </div>
+                            </div>
+                            <div class="admin-field" style="margin-bottom:12px;">
+                                <label for="riskToleranceStatement">Risk Appetite Statement</label>
+                                <textarea id="riskToleranceStatement" rows="4" placeholder="Describe the organization's risk appetite, tolerance levels, and business context for the threshold..."
+                                          style="width:100%;max-width:500px;padding:8px;border:2px solid #ddd;border-radius:4px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
+                            </div>
+                            <div class="admin-field" style="margin-bottom:12px;">
+                                <label for="riskToleranceReason">Reason for Change</label>
+                                <input type="text" id="riskToleranceReason" placeholder="Why is this threshold changing? (for audit trail)"
+                                       style="width:100%;max-width:500px;padding:6px;border:2px solid #ddd;border-radius:4px;">
+                            </div>
+                            <button onclick="saveRiskTolerance()" class="admin-save-btn">Save Risk Tolerance</button>
+                            <span id="riskToleranceStatus" style="margin-left:12px;font-size:0.85em;color:#50b88e;"></span>
+                        </div>
+                        <h4 style="margin-top:20px;">Threshold Change History</h4>
+                        <div style="overflow-x:auto;">
+                            <table class="admin-users-table" id="thresholdHistoryTable">
+                                <thead>
+                                    <tr><th>Timestamp</th><th>Changed By</th><th>Old Value</th><th>New Value</th><th>Reason</th></tr>
+                                </thead>
+                                <tbody id="thresholdHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- False Positive Review Section -->
+                    <div class="admin-section" style="margin-top:30px;">
+                        <h3>False Positive Review</h3>
+                        <div id="falsePositiveReviewContainer"></div>
                     </div>
 
                     <!-- Role Permissions Section -->
@@ -568,18 +802,82 @@
             </div>
             </div>
         </div>
-</body>
+    <!-- TOTP Setup Modal -->
+    <div id="totpSetupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1100;justify-content:center;align-items:center;">
+    <div style="background:white;border-radius:8px;padding:24px 32px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;">Setup Two-Factor Authentication</h3>
+            <span onclick="closeTotpSetupModal()" style="cursor:pointer;font-size:1.3em;color:#888;">&times;</span>
+        </div>
+        <div id="totpSetupStep1">
+            <p style="font-size:0.85em;color:#666;">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+            <div id="totpQrCode" style="text-align:center;margin:16px 0;"></div>
+            <p style="font-size:0.8em;color:#999;">Can't scan? Use this secret key:</p>
+            <code id="totpSecretDisplay" style="display:block;text-align:center;background:#f5f5f5;padding:6px;border-radius:4px;user-select:all;font-size:0.9em;word-break:break-all;"></code>
+            <div style="margin-top:16px;">
+                <label style="font-size:0.85em;font-weight:600;color:#57534E;">Enter verification code:</label>
+                <input type="text" id="totpSetupCode" placeholder="000000" maxlength="6"
+                    style="width:100%;padding:8px;font-size:16px;letter-spacing:4px;text-align:center;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;margin-top:6px;">
+            </div>
+            <button onclick="verifyTotpSetup()" style="width:100%;margin-top:12px;padding:10px;font-size:15px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;">Enable 2FA</button>
+        </div>
+        <div id="totpSetupStep2" style="display:none;">
+            <p style="color:#50b88e;font-weight:600;">Two-factor authentication enabled!</p>
+            <p style="font-size:0.85em;color:#666;">Save these backup codes in a safe place. Each can be used once if you lose your authenticator:</p>
+            <div id="totpBackupCodes" style="background:#f5f5f5;padding:12px;border-radius:4px;font-family:monospace;font-size:0.9em;"></div>
+            <button onclick="closeTotpSetupModal()" style="width:100%;margin-top:12px;padding:10px;font-size:15px;background:#57534E;color:white;border:none;border-radius:4px;cursor:pointer;">Done</button>
+        </div>
+    </div>
+    </div>
+
+    <!-- Risk Decision Modal -->
+    <div id="riskDecisionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1100;justify-content:center;align-items:center;">
+    <div style="background:white;border-radius:8px;padding:24px 32px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;">Risk Response</h3>
+            <span onclick="closeRiskDecisionModal()" style="cursor:pointer;font-size:1.3em;color:#888;">&times;</span>
+        </div>
+        <p style="font-size:0.85em;color:#666;"><strong id="riskDecisionCveId"></strong> on <strong id="riskDecisionCpeName"></strong></p>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.85em;font-weight:600;color:#57534E;">Decision</label>
+            <select id="riskDecisionType" onchange="onRiskDecisionTypeChange()" style="width:100%;padding:8px;border:2px solid #ddd;border-radius:4px;">
+                <option value="mitigate">Mitigate</option>
+                <option value="accept">Accept Risk</option>
+                <option value="transfer">Transfer</option>
+                <option value="avoid">Avoid</option>
+                <option value="false_positive">False Positive</option>
+            </select>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.85em;font-weight:600;color:#57534E;">Justification</label>
+            <textarea id="riskDecisionJustification" rows="3" placeholder="Explain the rationale for this decision..."
+                style="width:100%;padding:8px;border:2px solid #ddd;border-radius:4px;resize:vertical;box-sizing:border-box;font-size:14px;"></textarea>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.85em;font-weight:600;color:#57534E;">Review Date</label>
+            <input type="date" id="riskDecisionReviewDate" style="width:100%;padding:8px;border:2px solid #ddd;border-radius:4px;box-sizing:border-box;">
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button onclick="submitRiskDecision()" style="flex:1;padding:10px;background:#be7a15;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Submit</button>
+            <button onclick="closeRiskDecisionModal()" style="flex:1;padding:10px;background:#ddd;color:#333;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Cancel</button>
+        </div>
+        <div id="riskDecisionResult" style="margin-top:10px;font-size:0.85em;"></div>
+    </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.8.1/nouislider.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</body>
     <script src="/static/state.js"></script>
     <script src="/static/admin.js"></script>
+    <script src="/static/notifications.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/panel.js"></script>
     <script src="/static/tabs.js"></script>
     <script src="/static/search.js"></script>
-    <script src="/static/dragdrop.js"></script>
     <script src="/static/charts.js"></script>
     <script src="/static/cve.js"></script>
     <script src="/static/filters.js"></script>

@@ -7,11 +7,14 @@ function updateCveCounter() {
     totalCveCount = 0;
     for (let cpe in cveDataStore) {
         if (archivedAssets.has(cpe)) continue;
-        if (cveDataStore[cpe] && cveDataStore[cpe].count) {
-            totalCveCount += cveDataStore[cpe].count;
+        const data = cveDataStore[cpe];
+        if (!data?.vulnerabilities) continue;
+        for (const vuln of data.vulnerabilities) {
+            const cveId = vuln.cve?.id;
+            if (cveId && isFalsePositive(cpe, cveId)) continue;
+            totalCveCount++;
         }
     }
-    cveCounts.textContent = `${totalCveCount} CVEs found`;
 }
 
 // DISPLAY CVE RESULTS
@@ -29,7 +32,7 @@ function displayExpandedView(cve_data) {
 }
 
 // RENDER CVE EXPANDED VIEW
-function renderExpandedView() {
+async function renderExpandedView() {
     const container = document.getElementById('expandedDetails');
 
     const hasCves = totalCveCount > 0;
@@ -176,14 +179,29 @@ function renderExpandedView() {
     if (weaknesses.length) {
         html += `<h3>Weaknesses</h3>`;
         for (const w of weaknesses) {
-            const cweLinks = (w.description || []).map(d => {
-                const num = d.value.match(/\d+/)?.[0] || 'N/A';
-                return `<a href="https://cwe.mitre.org/data/definitions/${escapeHtml(num)}" target="_blank" rel="noopener">${escapeHtml(d.value)}</a>`;
-            }).join(', ');
-            html += `<div><strong>Source:</strong> ${escapeHtml(w.source || 'N/A')}</div>
-                <div><strong>Type:</strong> ${escapeHtml(w.type || 'N/A')}</div>
-                <div><strong>Weakness:</strong> ${cweLinks}</div>
-                <div>---</div>`;
+            for (const d of (w.description || [])) {
+                const num = d.value.match(/\d+/)?.[0] || null;
+                let cweName = 'N/A', cweDesc = 'N/A';
+                if (num) {
+                    try {
+                        const res = await fetch(`/api/cwe/${num}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            cweName = data.name || 'N/A';
+                            cweDesc = data.description || 'N/A';
+                        }
+                    } catch (_) {}
+                }
+                const cweLink = num
+                    ? `<a href="https://cwe.mitre.org/data/definitions/${escapeHtml(num)}" target="_blank" rel="noopener">${escapeHtml(d.value)}</a>`
+                    : escapeHtml(d.value);
+                html += `<div><strong>Source:</strong> ${escapeHtml(w.source || 'N/A')}</div>
+                    <div><strong>Type:</strong> ${escapeHtml(w.type || 'N/A')}</div>
+                    <div><strong>Weakness:</strong> ${cweLink}</div>
+                    <div><strong>Name:</strong> ${escapeHtml(cweName)}</div>
+                    <div><strong>Description:</strong> ${escapeHtml(cweDesc)}</div>
+                    <div>---</div>`;
+            }
         }
     }
 
@@ -589,11 +607,48 @@ function renderFolderTable(cpe, data) {
         }
     });
 
+    // Find current CPE name for risk decisions
+    const folderCpe = cpe !== '__all__' ? cpe : null;
+
     // Render rows
     for (const row of rows) {
         const tr = document.createElement('tr');
         const sevClass = row.severity ? `severity-${row.severity.toLowerCase()}` : '';
         const publishedFmt = row.published ? new Date(row.published).toLocaleDateString() : 'N/A';
+
+        // Risk decision badge
+        let riskBadge = '';
+        const rowCpe = folderCpe || findCpeForCve(row.id);
+        const rd = rowCpe ? getRiskDecision(rowCpe, row.id) : null;
+        if (rd) {
+            const colors = { mitigate: '#50b88e', accept: '#e67e22', transfer: '#3b82f6', avoid: '#999', false_positive: '#78909c' };
+            const isExpired = rd.review_date && new Date(rd.review_date) < new Date();
+            const badge = `<span style="background:${colors[rd.decision] || '#999'};color:white;padding:1px 6px;border-radius:3px;font-size:0.78em;text-transform:uppercase;">${escapeHtml(rd.decision)}</span>`;
+            const warning = isExpired ? ' <span style="color:#c01e19;" title="Review overdue">⚠</span>' : '';
+            riskBadge = badge + warning;
+        } else {
+            riskBadge = `<button class="risk-response-btn" data-cve="${escapeHtml(row.id)}" data-cpe="${escapeHtml(rowCpe || '')}"
+                style="padding:1px 6px;font-size:0.78em;background:none;border:1px solid #ccc;border-radius:3px;cursor:pointer;color:#666;">+ Risk Response</button>`;
+        }
+
+        // Ticket badge
+        let ticketBadge = '';
+        const linkedTicket = tickets.find(t => t.cve_id === row.id && t.cpe_name === rowCpe && !t.isArchived);
+        if (linkedTicket) {
+            const statusColor = linkedTicket.status === 'Resolved' ? '#2e7d32' :
+                                 linkedTicket.status === 'In Progress' ? '#1565c0' : '#e67e22';
+            ticketBadge = `<span class="ticket-link-badge" data-ticket-id="${linkedTicket.id}"
+                style="background:${statusColor};color:white;padding:1px 6px;border-radius:3px;font-size:0.78em;cursor:pointer;"
+                title="Ticket #${linkedTicket.id} (${escapeHtml(linkedTicket.status || 'Open')})">
+                T#${linkedTicket.id}</span>`;
+        }
+
+        // False positive row styling
+        const isFP = rd && rd.decision === 'false_positive';
+        if (isFP) {
+            tr.style.opacity = '0.5';
+            tr.style.textDecoration = 'line-through';
+        }
 
         tr.innerHTML = `
             <td><strong>${escapeHtml(row.id)}</strong></td>
@@ -605,7 +660,27 @@ function renderFolderTable(cpe, data) {
             <td title="${escapeHtml(row.tags)}">${escapeHtml(row.tags || '—')}</td>
             <td>${row.cvss !== null ? row.cvss.toFixed(1) : '—'}</td>
             <td class="${sevClass}">${escapeHtml(row.severity || '—')}</td>
+            <td>${ticketBadge}</td>
+            <td>${riskBadge}</td>
         `;
+
+        // Click on risk response button (not row click)
+        const riskBtn = tr.querySelector('.risk-response-btn');
+        if (riskBtn) {
+            riskBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openRiskDecisionModal(riskBtn.dataset.cve, riskBtn.dataset.cpe);
+            });
+        }
+
+        // Click on ticket badge navigates to tickets tab
+        const ticketLink = tr.querySelector('.ticket-link-badge');
+        if (ticketLink) {
+            ticketLink.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelector('[data-tab="tickets"]').click();
+            });
+        }
 
         tr.addEventListener('click', () => {
             displayExpandedView(row._vuln);
@@ -630,6 +705,108 @@ document.getElementById('cveFolderBack').addEventListener('click', (e) => {
     if (totalCveCount > 0) {
     }
 });
+
+// RISK DECISION HELPERS
+
+function findCpeForCve(cveId) {
+    for (const cpe in cveDataStore) {
+        const data = cveDataStore[cpe];
+        if (data?.vulnerabilities?.some(v => v.cve?.id === cveId)) return cpe;
+    }
+    return null;
+}
+
+function openRiskDecisionModal(cveId, cpeName) {
+    const modal = document.getElementById('riskDecisionModal');
+    modal.style.display = 'flex';
+    document.getElementById('riskDecisionCveId').textContent = cveId;
+    document.getElementById('riskDecisionCpeName').textContent = cpeName;
+    modal.dataset.cveId = cveId;
+    modal.dataset.cpeName = cpeName;
+    document.getElementById('riskDecisionType').value = 'mitigate';
+    document.getElementById('riskDecisionJustification').value = '';
+    document.getElementById('riskDecisionReviewDate').value = '';
+    document.getElementById('riskDecisionResult').innerHTML = '';
+    onRiskDecisionTypeChange();
+}
+
+function closeRiskDecisionModal() {
+    document.getElementById('riskDecisionModal').style.display = 'none';
+}
+
+function onRiskDecisionTypeChange() {
+    const type = document.getElementById('riskDecisionType').value;
+    const reviewField = document.getElementById('riskDecisionReviewDate');
+    const justField = document.getElementById('riskDecisionJustification');
+    if (reviewField) {
+        reviewField.required = (type === 'accept');
+    }
+    if (justField) {
+        justField.required = (type === 'accept' || type === 'false_positive');
+    }
+}
+
+async function submitRiskDecision() {
+    const modal = document.getElementById('riskDecisionModal');
+    const cveId = modal.dataset.cveId;
+    const cpeName = modal.dataset.cpeName;
+    const decision = document.getElementById('riskDecisionType').value;
+    const justification = document.getElementById('riskDecisionJustification').value.trim();
+    const reviewDate = document.getElementById('riskDecisionReviewDate').value;
+    const resultEl = document.getElementById('riskDecisionResult');
+    resultEl.innerHTML = '';
+
+    if (decision === 'false_positive' && !justification) {
+        resultEl.innerHTML = '<span style="color:#c01e19;">Justification is required for false positive determination.</span>';
+        return;
+    }
+    if (decision === 'accept' && !justification) {
+        resultEl.innerHTML = '<span style="color:#c01e19;">Justification is required for risk acceptance.</span>';
+        return;
+    }
+    if (decision === 'accept' && !reviewDate) {
+        resultEl.innerHTML = '<span style="color:#c01e19;">Review date is required for risk acceptance.</span>';
+        return;
+    }
+
+    try {
+        const res = await fetch('/db/risk-decision', {
+            method: 'POST',
+            headers: csrfHeaders(),
+            body: JSON.stringify({ cpe_name: cpeName, cve_id: cveId, decision, justification, review_date: reviewDate })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeRiskDecisionModal();
+            await loadRiskDecisions();
+            // Re-render the current folder table
+            const folderView = document.getElementById('cveFolderView');
+            const cpeKey = folderView.dataset.cpe;
+            if (cpeKey === '__all__') {
+                openAllCveFolder();
+            } else if (cpeKey) {
+                renderFolderTable(cpeKey, cveDataStore[cpeKey]);
+            }
+        } else {
+            resultEl.innerHTML = `<span style="color:#c01e19;">${escapeHtml(data.error)}</span>`;
+        }
+    } catch (e) {
+        resultEl.innerHTML = '<span style="color:#c01e19;">Connection error.</span>';
+    }
+}
+
+// NAVIGATE TO CVE FROM TICKET LINK
+function navigateToCve(cveId, cpeName) {
+    document.querySelector('[data-tab="charts"]').click();
+    if (cpeName && cveDataStore[cpeName]) {
+        openCveFolder(cpeName, cveDataStore[cpeName]);
+    }
+    const data = cpeName ? cveDataStore[cpeName] : null;
+    if (data?.vulnerabilities) {
+        const vuln = data.vulnerabilities.find(v => v.cve?.id === cveId);
+        if (vuln) displayExpandedView(vuln);
+    }
+}
 
 // CPE INFO ICON CLICK
 document.getElementById('cpeInfoIcon').addEventListener('click', () => {

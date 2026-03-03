@@ -31,35 +31,34 @@ tabButtons.forEach(button => {
         if (typeof updateChartFullscreenBtn === 'function') updateChartFullscreenBtn();
 
         button.classList.add('active');
+        sessionStorage.setItem('activeTab', button.dataset.tab);
 
         document.getElementById('chartConfig').style.display = button.dataset.tab === 'charts' ? 'flex' : 'none';
-        
+
         // Show/hide filter panel based on active tab
         const filterBtn = document.getElementById('openSearchFilterModal');
         filterBtn.style.display = (button.dataset.tab === 'search' && allResults.length > 0) ? 'inline-block' : 'none';
-        // Show/hide Assets drop zone, CVE counter, and left panel based on active tab + permissions
-        const dropZoneEl = document.getElementById('dropZone');
-        const cveCountsContainer = document.querySelector('.cveCounts-container');
-        const isSearch = button.dataset.tab === 'search';
-        const isCharts = button.dataset.tab === 'charts';
-        const hasDragPerm = hasPermission('Search', 'drag and drop to Assets folder');
 
-        dropZoneEl.style.display = (isSearch && hasDragPerm) ? 'block' : 'none';
-        cveCountsContainer.style.display = (isSearch && hasDragPerm) ? 'block' : 'none';
-
-        if (isSearch) {
-            leftPanel.style.display = hasDragPerm ? '' : 'none';
-        } else if (isCharts) {
-            leftPanel.style.display = '';
-        } else {
-            leftPanel.style.display = 'none';
-        }
+        // Show left panel only on Charts tab
+        leftPanel.style.display = button.dataset.tab === 'charts' ? '' : 'none';
 
         const targetPanel = document.querySelector(`.tab-panel[data-panel="${button.dataset.tab}"]`);
         if (targetPanel) targetPanel.classList.add('active');
 
-        if (button.dataset.tab === 'charts' && epssChartInstance) {
-            setTimeout(() => epssChartInstance.resize(), 50);
+        if (button.dataset.tab === 'charts') {
+            setTimeout(() => {
+                if (!chartLayout.length) {
+                    loadChartLayout();
+                } else {
+                    renderChartDashboard();
+                    renderChartPalette();
+                }
+                for (const id of chartLayout) {
+                    if (!id) continue;
+                    const c = document.getElementById(id);
+                    if (c) { const inst = Chart.getChart(c); if (inst) inst.resize(); }
+                }
+            }, 50);
         }
     });
 });

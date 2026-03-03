@@ -1,3 +1,5 @@
+let mfaSessionToken = null;
+
 async function checkAuth() {
     try {
         const res = await fetch('/auth/me');
@@ -9,6 +11,7 @@ async function checkAuth() {
 
 function showAuthOverlay() {
     currentUser = null;
+    stopNotifPolling();
     document.getElementById('authOverlay').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
     document.getElementById('userBar').style.display = 'none';
@@ -23,6 +26,21 @@ async function showApp() {
     document.getElementById('userUsername').textContent = currentUser.username;
     document.getElementById('userRole').textContent = currentUser.role;
 
+    // MFA badge
+    const mfaBadge = document.getElementById('mfaBadge');
+    if (mfaBadge) {
+        mfaBadge.style.display = 'inline';
+        if (currentUser.totp_enabled) {
+            mfaBadge.style.color = '#50b88e';
+            mfaBadge.title = '2FA Enabled — click to disable';
+            mfaBadge.onclick = () => disableTotp();
+        } else {
+            mfaBadge.style.color = '#e67e22';
+            mfaBadge.title = '2FA Not Enabled — click to set up';
+            mfaBadge.onclick = () => startTotpSetup();
+        }
+    }
+
     // Hide admin tab and panel BEFORE permission-based tab logic runs,
     // so the fallback "first visible tab" never lands on admin
     const adminTab = document.querySelector('[data-tab="admin"]');
@@ -30,14 +48,18 @@ async function showApp() {
     if (adminTab) adminTab.style.display = hasMinRole('admin') ? '' : 'none';
     if (adminPanel && !hasMinRole('admin')) adminPanel.style.display = 'none';
 
+    // Read saved tab BEFORE applyTabPermissions() can overwrite sessionStorage via click()
+    const savedTab = sessionStorage.getItem('activeTab');
+
     // Load permissions BEFORE rendering data so hasPermission() works in render functions
     await loadUserPermissions();
     applyTabPermissions();
     applyPermissions();
 
-    // Hide left panel on Search tab if user lacks drag-and-drop permission
-    if (!hasPermission('Search', 'drag and drop to Assets folder')) {
-        leftPanel.style.display = 'none';
+    // Restore the tab the user was on before the page reload
+    if (savedTab) {
+        const savedBtn = document.querySelector(`.tab-button[data-tab="${savedTab}"]`);
+        if (savedBtn && savedBtn.style.display !== 'none') savedBtn.click();
     }
 
     loadPersistedData();
@@ -45,27 +67,43 @@ async function showApp() {
         loadOrgPolicies();
         loadAdminUsers();
     }
+    // Initialize notifications
+    startNotifPolling();
+    // Load org risk tolerance (for chart slider sync + display)
+    loadRiskTolerance();
+}
+
+function hideAllAuthForms() {
+    for (const id of ['loginForm', 'newUserForm', 'setPasswordForm', 'totpForm', 'backupCodeForm']) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    }
+    document.getElementById('authError').textContent = '';
 }
 
 function showLoginForm() {
+    hideAllAuthForms();
     document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('newUserForm').style.display = 'none';
-    document.getElementById('setPasswordForm').style.display = 'none';
-    document.getElementById('authError').textContent = '';
 }
 
 function showNewUserForm() {
-    document.getElementById('loginForm').style.display = 'none';
+    hideAllAuthForms();
     document.getElementById('newUserForm').style.display = 'block';
-    document.getElementById('setPasswordForm').style.display = 'none';
-    document.getElementById('authError').textContent = '';
 }
 
 function showSetPasswordForm() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('newUserForm').style.display = 'none';
+    hideAllAuthForms();
     document.getElementById('setPasswordForm').style.display = 'block';
-    document.getElementById('authError').textContent = '';
+}
+
+function showTotpForm() {
+    hideAllAuthForms();
+    document.getElementById('totpForm').style.display = 'block';
+}
+
+function showBackupCodeForm() {
+    hideAllAuthForms();
+    document.getElementById('backupCodeForm').style.display = 'block';
 }
 
 async function handleLogin() {
@@ -76,12 +114,56 @@ async function handleLogin() {
     if (!username || !password) { err.textContent = 'Please enter username and password.'; return; }
     try {
         const res = await fetch('/auth/login', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
+            method: 'POST', headers: csrfHeaders(),
             body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-        if (data.success) { currentUser = data.user; showApp(); }
-        else { err.textContent = data.error || 'Login failed.'; }
+        if (data.requires_mfa) {
+            mfaSessionToken = data.mfa_session_token;
+            showTotpForm();
+        } else if (data.success && data.mfa_setup_required) {
+            currentUser = data.user;
+            hideAllAuthForms();
+            document.getElementById('authOverlay').style.display = 'flex';
+            alert('MFA is required for your role. Please set up two-factor authentication to continue.');
+            startTotpSetup();
+        } else if (data.success) {
+            currentUser = data.user; showApp();
+        } else {
+            err.textContent = data.error || 'Login failed.';
+        }
+    } catch (e) { err.textContent = 'Connection error.'; }
+}
+
+async function handleTotpVerify() {
+    const code = document.getElementById('totpCode').value.trim();
+    const err = document.getElementById('authError');
+    err.textContent = '';
+    if (!code) { err.textContent = 'Please enter the 6-digit code.'; return; }
+    try {
+        const res = await fetch('/auth/totp-verify', {
+            method: 'POST', headers: csrfHeaders(),
+            body: JSON.stringify({ code, mfa_session_token: mfaSessionToken })
+        });
+        const data = await res.json();
+        if (data.success) { currentUser = data.user; mfaSessionToken = null; showApp(); }
+        else { err.textContent = data.error || 'Verification failed.'; }
+    } catch (e) { err.textContent = 'Connection error.'; }
+}
+
+async function handleBackupCodeVerify() {
+    const code = document.getElementById('backupCode').value.trim();
+    const err = document.getElementById('authError');
+    err.textContent = '';
+    if (!code) { err.textContent = 'Please enter a backup code.'; return; }
+    try {
+        const res = await fetch('/auth/totp-verify', {
+            method: 'POST', headers: csrfHeaders(),
+            body: JSON.stringify({ code, mfa_session_token: mfaSessionToken })
+        });
+        const data = await res.json();
+        if (data.success) { currentUser = data.user; mfaSessionToken = null; showApp(); }
+        else { err.textContent = data.error || 'Verification failed.'; }
     } catch (e) { err.textContent = 'Connection error.'; }
 }
 
@@ -93,7 +175,7 @@ async function handleOtpLogin() {
     if (!username || !otp) { err.textContent = 'Please enter username and one-time password.'; return; }
     try {
         const res = await fetch('/auth/verify-otp', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
+            method: 'POST', headers: csrfHeaders(),
             body: JSON.stringify({ username, otp })
         });
         const data = await res.json();
@@ -103,6 +185,15 @@ async function handleOtpLogin() {
     } catch (e) { err.textContent = 'Connection error.'; }
 }
 
+function validatePassword(pw) {
+    if (pw.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(pw)) return 'Must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(pw)) return 'Must contain at least one lowercase letter.';
+    if (!/\d/.test(pw)) return 'Must contain at least one digit.';
+    if (!/[^A-Za-z0-9]/.test(pw)) return 'Must contain at least one special character.';
+    return null;
+}
+
 async function handleSetPassword() {
     const password = document.getElementById('newPassword').value;
     const confirm = document.getElementById('confirmNewPassword').value;
@@ -110,10 +201,11 @@ async function handleSetPassword() {
     err.textContent = '';
     if (!password) { err.textContent = 'Password is required.'; return; }
     if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
-    if (password.length < 8) { err.textContent = 'Password must be 8+ characters.'; return; }
+    const pwErr = validatePassword(password);
+    if (pwErr) { err.textContent = pwErr; return; }
     try {
         const res = await fetch('/auth/set-password', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
+            method: 'POST', headers: csrfHeaders(),
             body: JSON.stringify({ password })
         });
         const data = await res.json();
@@ -123,24 +215,53 @@ async function handleSetPassword() {
 }
 
 async function handleLogout() {
-    await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/auth/logout', { method: 'POST', headers: csrfHeaders() }).catch(() => {});
     currentUser = null;
     userPermissions = null;
     allResults = []; cveDataStore = {}; cpeDataStore = {};
     totalCveCount = 0; tickets = []; ticketIdCounter = 1;
-    selectedItems.innerHTML = '<p id="placeholder" style="color:#999;font-style:italic;">Drag and drop your assets here...</p>';
-    const addAssetsBtn = document.getElementById('addAssetsBtn');
-    if (addAssetsBtn) addAssetsBtn.style.display = 'none';
-    document.getElementById('cveCounts').textContent = '0 CVEs found';
+    checkedSearchItems = new Set();
     leftPanel.style.display = '';
     // Reset admin panel visibility for next login
     const adminPanelEl = document.querySelector('[data-panel="admin"]');
     if (adminPanelEl) adminPanelEl.style.display = '';
     resultsList.innerHTML = ''; resultsContainer.style.display = 'none';
     document.getElementById('ticketsList').innerHTML = '';
-    if (epssChartInstance) { epssChartInstance.destroy(); epssChartInstance = null; }
-    if (cvssHistogramInstance) { cvssHistogramInstance.destroy(); cvssHistogramInstance = null; }
+    chartLayout.forEach(id => {
+        if (!id) return;
+        const c = document.getElementById(id);
+        if (c) { const inst = Chart.getChart(c); if (inst) inst.destroy(); }
+    });
+    chartLayout = [];
+    const chartDashboardEl = document.getElementById('chartDashboard');
+    if (chartDashboardEl) chartDashboardEl.innerHTML = '';
+    const chartPaletteEl = document.getElementById('chartPalette');
+    if (chartPaletteEl) chartPaletteEl.innerHTML = '';
     archivedAssets = new Set();
+    activeTicketFilter = null;
+    const sortSelect = document.getElementById('ticketSortSelect');
+    if (sortSelect) sortSelect.value = 'default';
+
+    // Reset chart config state and DOM to defaults
+    chartAggMethod = 'mean';
+    chartRiskThreshold = 7.0;
+    const aggMethodSelect = document.getElementById('aggMethodSelect');
+    if (aggMethodSelect) aggMethodSelect.value = 'mean';
+    const riskThresholdSlider = document.getElementById('riskThresholdSlider');
+    if (riskThresholdSlider) riskThresholdSlider.value = '7';
+    const thresholdValue = document.getElementById('thresholdValue');
+    if (thresholdValue) thresholdValue.textContent = '7.0';
+
+    // Reset active tab DOM to default (Search) so the next user doesn't inherit the previous tab
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabPanels.forEach(panel => panel.classList.remove('active'));
+    const defaultTabBtn = document.querySelector('.tab-button[data-tab="search"]');
+    const defaultTabPanel = document.querySelector('.tab-panel[data-panel="search"]');
+    if (defaultTabBtn) defaultTabBtn.classList.add('active');
+    if (defaultTabPanel) defaultTabPanel.classList.add('active');
+    document.getElementById('chartConfig').style.display = 'none';
+
+    sessionStorage.removeItem('activeTab');
     showAuthOverlay();
 }
 
@@ -154,7 +275,20 @@ async function loadUserPermissions() {
     try {
         const res = await fetch('/auth/my-permissions');
         const data = await res.json();
-        userPermissions = data.permissions || {};
+        const saved = data.permissions || {};
+        // Fill in any missing keys from DEFAULT_PERMISSIONS so newly-added
+        // permissions work even if the DB hasn't been re-saved by an admin.
+        const role = currentUser?.role || 'viewer';
+        const filled = {};
+        for (const [cat, actions] of Object.entries(DEFAULT_PERMISSIONS)) {
+            filled[cat] = {};
+            for (const [action, roleMap] of Object.entries(actions)) {
+                filled[cat][action] = (saved[cat] && action in saved[cat])
+                    ? saved[cat][action]
+                    : (roleMap[role] ?? 0);
+            }
+        }
+        userPermissions = filled;
     } catch (e) {
         console.error('Failed to load user permissions:', e);
         userPermissions = {};
@@ -209,9 +343,84 @@ function applyTabPermissions() {
     }
 }
 
+// =====================
+// TOTP SETUP (Settings)
+// =====================
+
+async function startTotpSetup() {
+    try {
+        const res = await fetch('/auth/totp-setup', { method: 'POST', headers: csrfHeaders() });
+        const data = await res.json();
+        if (data.error) { alert(data.error); return; }
+
+        // Show modal with QR code
+        const modal = document.getElementById('totpSetupModal');
+        modal.style.display = 'flex';
+        document.getElementById('totpSetupStep1').style.display = 'block';
+        document.getElementById('totpSetupStep2').style.display = 'none';
+
+        document.getElementById('totpQrCode').innerHTML = `<img src="${data.qr_code}" alt="QR Code" style="max-width:200px;">`;
+        document.getElementById('totpSecretDisplay').textContent = data.secret;
+        // Store backup codes for display after verification
+        modal.dataset.backupCodes = JSON.stringify(data.backup_codes);
+    } catch (e) { alert('Failed to start TOTP setup.'); }
+}
+
+async function verifyTotpSetup() {
+    const code = document.getElementById('totpSetupCode').value.trim();
+    if (!code) { alert('Please enter the 6-digit code from your authenticator.'); return; }
+    try {
+        const res = await fetch('/auth/totp-verify-setup', {
+            method: 'POST', headers: csrfHeaders(),
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('totpSetupStep1').style.display = 'none';
+            document.getElementById('totpSetupStep2').style.display = 'block';
+            const modal = document.getElementById('totpSetupModal');
+            const codes = JSON.parse(modal.dataset.backupCodes || '[]');
+            document.getElementById('totpBackupCodes').innerHTML = codes.map(c => `<div>${c}</div>`).join('');
+            // Update user state
+            if (currentUser) currentUser.totp_enabled = true;
+        } else {
+            alert(data.error || 'Verification failed.');
+        }
+    } catch (e) { alert('Connection error.'); }
+}
+
+function closeTotpSetupModal() {
+    document.getElementById('totpSetupModal').style.display = 'none';
+    document.getElementById('totpSetupCode').value = '';
+    // If MFA setup was forced (mfa_setup_required), re-check auth to transition into app
+    if (currentUser && document.getElementById('authOverlay').style.display !== 'none') {
+        checkAuth();
+    }
+}
+
+async function disableTotp() {
+    const code = prompt('Enter your current TOTP code to disable 2FA:');
+    if (!code) return;
+    try {
+        const res = await fetch('/auth/totp-disable', {
+            method: 'POST', headers: csrfHeaders(),
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Two-factor authentication has been disabled.');
+            if (currentUser) currentUser.totp_enabled = false;
+        } else {
+            alert(data.error || 'Failed to disable 2FA.');
+        }
+    } catch (e) { alert('Connection error.'); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleLogin(); });
     document.getElementById('otpPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleOtpLogin(); });
     document.getElementById('confirmNewPassword')?.addEventListener('keypress', e => { if (e.key==='Enter') handleSetPassword(); });
+    document.getElementById('totpCode')?.addEventListener('keypress', e => { if (e.key==='Enter') handleTotpVerify(); });
+    document.getElementById('backupCode')?.addEventListener('keypress', e => { if (e.key==='Enter') handleBackupCodeVerify(); });
     checkAuth();
 });

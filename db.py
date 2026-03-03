@@ -24,21 +24,25 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS assets (
-            cpeName TEXT PRIMARY KEY,
+            cpeName TEXT NOT NULL,
+            org_id  INTEGER NOT NULL DEFAULT 1,
             user_id INTEGER NOT NULL,
-            title TEXT,
+            title   TEXT,
             cpeData TEXT,
             cveData TEXT,
+            PRIMARY KEY (cpeName, org_id),
+            FOREIGN KEY (org_id)  REFERENCES organizations(id),
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
         
         CREATE TABLE IF NOT EXISTS archivedAssets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cpeName TEXT NOT NULL,
+            org_id  INTEGER NOT NULL DEFAULT 1,
             user_id INTEGER NOT NULL,
             archived TEXT,
             isArchived INTEGER DEFAULT 0,
-            FOREIGN KEY (cpeName) REFERENCES assets(cpeName) ON DELETE CASCADE,
+            FOREIGN KEY (cpeName, org_id) REFERENCES assets(cpeName, org_id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
@@ -133,6 +137,14 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS feature_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            created_by INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        );
+
         CREATE TABLE IF NOT EXISTS ticketActivity (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id INTEGER NOT NULL,
@@ -188,6 +200,91 @@ def init_db():
             FOREIGN KEY (updated_by) REFERENCES users(id)
         );
 
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            user_id INTEGER,
+            username TEXT,
+            action TEXT NOT NULL,
+            resource_type TEXT,
+            resource_id TEXT,
+            details TEXT,
+            ip_address TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS risk_decisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            cpe_name TEXT NOT NULL,
+            cve_id TEXT NOT NULL,
+            decision TEXT NOT NULL,
+            justification TEXT,
+            decided_by INTEGER NOT NULL,
+            approved_by INTEGER,
+            review_date TEXT,
+            ticket_id INTEGER,
+            status TEXT DEFAULT 'active',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id),
+            FOREIGN KEY (decided_by) REFERENCES users(id),
+            FOREIGN KEY (approved_by) REFERENCES users(id),
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS scan_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            cpe_name TEXT NOT NULL,
+            scan_type TEXT DEFAULT 'scheduled',
+            new_cve_count INTEGER DEFAULT 0,
+            total_cve_count INTEGER DEFAULT 0,
+            tickets_created INTEGER DEFAULT 0,
+            started_at TEXT,
+            completed_at TEXT,
+            status TEXT DEFAULT 'pending',
+            error_message TEXT,
+            FOREIGN KEY (org_id) REFERENCES organizations(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT,
+            link TEXT,
+            resource_type TEXT,
+            resource_id TEXT,
+            is_read INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS notification_preferences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            UNIQUE(user_id, type),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS risk_threshold_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            org_id INTEGER NOT NULL DEFAULT 1,
+            old_value REAL NOT NULL,
+            new_value REAL NOT NULL,
+            changed_by INTEGER NOT NULL,
+            reason TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (org_id) REFERENCES organizations(id),
+            FOREIGN KEY (changed_by) REFERENCES users(id)
+        );
 
     ''')
     conn.commit()
@@ -201,6 +298,148 @@ def init_db():
         conn.execute('ALTER TABLE commentTickets ADD COLUMN fixed TEXT')
     except:
         pass
+
+    # Migration: add org_id to assets if missing (old schema had cpeName as sole PK)
+    try:
+        conn.execute('ALTER TABLE assets ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1')
+    except:
+        pass
+
+    # Migration: add org_id to archivedAssets if missing
+    try:
+        conn.execute('ALTER TABLE archivedAssets ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1')
+    except:
+        pass
+
+    # Migration: add chart_layout_json to users if missing
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN chart_layout_json TEXT')
+    except:
+        pass
+
+    # Migration: TOTP / MFA columns
+    for col, defn in [
+        ('totp_secret', 'TEXT'),
+        ('totp_enabled', 'INTEGER DEFAULT 0'),
+        ('backup_codes', 'TEXT'),
+        ('failed_login_count', 'INTEGER DEFAULT 0'),
+        ('locked_until', 'TEXT'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE users ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: asset scanning columns
+    for col, defn in [
+        ('last_scanned', 'TEXT'),
+        ('auto_ticket', 'INTEGER DEFAULT 1'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE assets ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: org_policies mfa_required_role column
+    try:
+        conn.execute('ALTER TABLE org_policies ADD COLUMN mfa_required_role INTEGER')
+    except Exception:
+        pass
+
+    # Migration: org_policies scanning columns
+    for col, defn in [
+        ('rescan_enabled', 'INTEGER DEFAULT 0'),
+        ('rescan_interval_hours', 'INTEGER DEFAULT 168'),
+        ('auto_ticket_enabled', 'INTEGER DEFAULT 0'),
+        ('auto_ticket_threshold', 'REAL DEFAULT 7.0'),
+        ('auto_ticket_feature', "TEXT DEFAULT 'Auto-Generated'"),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE org_policies ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: asset criticality and tags
+    for col, defn in [
+        ('criticality', 'INTEGER DEFAULT 3'),
+        ('tags', "TEXT DEFAULT '[]'"),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE assets ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: CVE-ticket linkage columns
+    for col, defn in [
+        ('cve_id', 'TEXT'),
+        ('cpe_name', 'TEXT'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE tickets ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: risk tolerance columns on org_policies
+    for col, defn in [
+        ('risk_threshold', 'REAL DEFAULT 7.0'),
+        ('risk_tolerance_statement', 'TEXT'),
+        ('risk_tolerance_updated_at', 'TEXT'),
+        ('risk_tolerance_updated_by', 'INTEGER'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE org_policies ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: rebuild notification_preferences if it has the old per-column schema
+    np_cols = [row[1] for row in conn.execute('PRAGMA table_info(notification_preferences)').fetchall()]
+    if 'type' not in np_cols:
+        conn.execute('DROP TABLE IF EXISTS notification_preferences')
+        conn.execute('''
+            CREATE TABLE notification_preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                UNIQUE(user_id, type),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+
+    # Migration: add resource_type/resource_id to notifications if missing
+    n_cols = [row[1] for row in conn.execute('PRAGMA table_info(notifications)').fetchall()]
+    if 'resource_type' not in n_cols:
+        try:
+            conn.execute('ALTER TABLE notifications ADD COLUMN resource_type TEXT')
+        except Exception:
+            pass
+    if 'resource_id' not in n_cols:
+        try:
+            conn.execute('ALTER TABLE notifications ADD COLUMN resource_id TEXT')
+        except Exception:
+            pass
+
+    # Migration: SLA policy columns on org_policies (ID.RA-06)
+    for col, defn in [
+        ('sla_enabled',       'INTEGER DEFAULT 0'),
+        ('sla_critical_days', 'INTEGER DEFAULT 7'),
+        ('sla_standard_days', 'INTEGER DEFAULT 30'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE org_policies ADD COLUMN {col} {defn}')
+        except:
+            pass
+
+    # Migration: SLA columns on tickets (ID.RA-06)
+    for col, defn in [
+        ('sla_tier',     "TEXT DEFAULT 'Standard'"),
+        ('sla_deadline', 'TEXT'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE tickets ADD COLUMN {col} {defn}')
+        except:
+            pass
+
     conn.commit()
 
     # Seed roles if empty
@@ -217,7 +456,24 @@ def init_db():
     # Seed default org_policies if empty
     if conn.execute('SELECT COUNT(*) FROM org_policies').fetchone()[0] == 0:
         conn.execute("INSERT INTO org_policies (org_id, otp_expiry_hours) VALUES (1, 72)")
-    
+
+    # Seed default feature categories if empty
+    if conn.execute('SELECT COUNT(*) FROM feature_categories').fetchone()[0] == 0:
+        defaults = [
+            'Search', 'myCharts', 'Asset Directory',
+            'myTickets', 'Left Panel', 'Right Panel', 'Other',
+            'Auto-Generated',
+        ]
+        for name in defaults:
+            conn.execute(
+                'INSERT INTO feature_categories (name) VALUES (?)',
+                (name,),
+            )
+    else:
+        # Ensure 'Auto-Generated' category exists for scheduled scans
+        if not conn.execute("SELECT id FROM feature_categories WHERE name = 'Auto-Generated'").fetchone():
+            conn.execute("INSERT INTO feature_categories (name) VALUES ('Auto-Generated')")
+
     conn.commit()
 
     conn.close()
