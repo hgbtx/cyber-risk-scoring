@@ -440,6 +440,11 @@ def init_db():
         except:
             pass
 
+    try:
+        conn.execute('ALTER TABLE resolvedTickets ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0')
+    except:
+        pass
+
     conn.commit()
 
     # Seed roles if empty

@@ -9,13 +9,11 @@ def generate_otp(length=12):
     raw = ''.join(secrets.choice(alphabet) for _ in range(length))
     return '-'.join(raw[i:i+4] for i in range(0, length, 4))
 
-
 def get_otp_expiry_hours():
     conn = get_db()
     row = conn.execute('SELECT otp_expiry_hours FROM org_policies LIMIT 1').fetchone()
     conn.close()
     return row['otp_expiry_hours'] if row else 72
-
 
 def create_admin(username, password):
     if len(password) < 8:
@@ -35,7 +33,6 @@ def create_admin(username, password):
     conn.commit()
     conn.close()
     print(f'Admin account created: {username}')
-
 
 def create_user(username, role='viewer'):
     valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst','manager', 'admin')
@@ -64,7 +61,6 @@ def create_user(username, role='viewer'):
     print(f'One-time password: {otp}')
     print(f'Expires: {expires_at}')
 
-
 def promote_user(username, role):
     valid_roles = ('viewer', 'tier 1 analyst', 'tier 2 analyst','manager', 'admin')
     if role not in valid_roles:
@@ -82,7 +78,6 @@ def promote_user(username, role):
     conn.commit()
     conn.close()
     print(f'{username}: {old_role} -> {role}')
-
 
 def reset_otp(username):
     init_db()

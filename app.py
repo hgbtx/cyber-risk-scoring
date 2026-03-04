@@ -322,6 +322,10 @@ def csrf_protect():
     if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
         if request.path in CSRF_EXEMPT:
             return
+        # Skip CSRF enforcement for unauthenticated requests — login_required
+        # will return 401. CSRF only applies to authenticated sessions.
+        if 'user_id' not in session:
+            return
         token_header = request.headers.get('X-CSRF-Token', '')
         token_session = session.get('csrf_token', '')
         if not token_session or not hmac.compare_digest(token_header, token_session):
@@ -339,7 +343,7 @@ def add_security_headers(response):
             "style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'",
             "font-src 'self' https://cdnjs.cloudflare.com data:",
             "img-src 'self' data:",
-            "connect-src 'self'",
+            "connect-src 'self' https://cdn.jsdelivr.net",
             "frame-ancestors 'none'"
         ])
         response.headers['Content-Security-Policy'] = csp
@@ -1512,8 +1516,8 @@ def ticket_resolution():
         )
     else:
         conn.execute(
-            'INSERT INTO resolvedTickets (ticket_id, resolved, isResolved) VALUES (?, ?, ?)',
-            (ticket_id, resolved_ts, int(is_resolved))
+            'INSERT INTO resolvedTickets (ticket_id, user_id, resolved, isResolved) VALUES (?, ?, ?, ?)',
+            (ticket_id, get_current_user_id(), resolved_ts, int(is_resolved))
         )
 
     action = 'Resolved' if is_resolved else 'Reopened'
@@ -2057,19 +2061,19 @@ def load_tickets():
             'timestamp': a['timestamp']
         })
 
-        # Fetch collaborators per ticket
-        collab_rows = conn.execute('''
-            SELECT ticketCollaborators.ticket_id, users.username AS collaborator_username
-            FROM ticketCollaborators
-            JOIN users ON ticketCollaborators.user_id = users.id
-        ''').fetchall()
+    # Fetch collaborators once, outside the activity loop
+    collab_rows = conn.execute('''
+        SELECT ticketCollaborators.ticket_id, users.username AS collaborator_username
+        FROM ticketCollaborators
+        JOIN users ON ticketCollaborators.user_id = users.id
+    ''').fetchall()
 
-        collab_map = {}
-        for c in collab_rows:
-            tid = c['ticket_id']
-            if tid not in collab_map:
-                collab_map[tid] = []
-            collab_map[tid].append(c['collaborator_username'])
+    collab_map = {}
+    for c in collab_rows:
+        tid = c['ticket_id']
+        if tid not in collab_map:
+            collab_map[tid] = []
+        collab_map[tid].append(c['collaborator_username'])
 
     conn.close()
     return jsonify([{

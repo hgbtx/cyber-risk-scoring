@@ -73,4 +73,5 @@ def check_ownership(resource_type, resource_id, user_id):
         conn.close()
         return True
 
+    conn.close()
     return False

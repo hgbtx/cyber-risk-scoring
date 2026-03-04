@@ -47,6 +47,8 @@ function updateNotifBadge() {
     }
 }
 
+let notifPollFailures = 0;
+
 async function pollUnreadCount() {
     try {
         const res = await fetch('/notifications/unread-count');
@@ -54,10 +56,25 @@ async function pollUnreadCount() {
         const data = await res.json();
         unreadNotifCount = data.unread_count || 0;
         updateNotifBadge();
-    } catch (e) { /* silent */ }
+        // Reset backoff on success
+        if (notifPollFailures > 0) {
+            notifPollFailures = 0;
+            restartNotifPolling(30000);
+        }
+    } catch (e) {
+        notifPollFailures++;
+        const backoff = Math.min(30000 * Math.pow(2, notifPollFailures), 300000);
+        restartNotifPolling(backoff);
+    }
+}
+
+function restartNotifPolling(intervalMs) {
+    if (notifPollInterval) clearInterval(notifPollInterval);
+    notifPollInterval = setInterval(pollUnreadCount, intervalMs);
 }
 
 function startNotifPolling() {
+    notifPollFailures = 0;
     pollUnreadCount();
     if (notifPollInterval) clearInterval(notifPollInterval);
     notifPollInterval = setInterval(pollUnreadCount, 30000);

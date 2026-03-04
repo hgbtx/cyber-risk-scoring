@@ -24,11 +24,12 @@ document.getElementById('submitTicketBtn').addEventListener('click', () => {
     const ticket = {
         id: ticketIdCounter++,
         user_id: currentUser?.id,
-        creator_email: currentUser?.username,
+        creator_username: currentUser?.username,
         description: desc,
         feature: feature,
         created: new Date().toLocaleString(),
-        resolved: false
+        resolved: false,
+        status: 'Open'
     };
     tickets.push(ticket);
     saveTickets();
@@ -71,7 +72,7 @@ function renderTickets() {
         const { feature, date, owner, status, includeArchived } = activeTicketFilter;
         visibleTickets = includeArchived ? [...tickets] : tickets.filter(t => !t.isArchived);
         if (feature) visibleTickets = visibleTickets.filter(t => t.feature === feature);
-        if (owner) visibleTickets = visibleTickets.filter(t => (t.creator_email || String(t.user_id)) === owner);
+        if (owner) visibleTickets = visibleTickets.filter(t => (t.creator_username || String(t.user_id)) === owner);
         if (status) visibleTickets = visibleTickets.filter(t => t.status === status);
         if (date) {
             visibleTickets = visibleTickets.filter(t => {
@@ -124,7 +125,7 @@ function renderTickets() {
 
     for (const t of visibleTickets) {
         const isOwner = (t.user_id === uid || !t.user_id);
-        const isCollaborator = (t.collaborators || []).includes(currentUser?.email);
+        const isCollaborator = (t.collaborators || []).includes(currentUser?.username);
         const cveLink = t.cve_id
             ? '<div style="margin: 4px 0; font-size: 0.82em;">'
                 + '<span style="color: #4a90d9; cursor: pointer; text-decoration: underline;"'
@@ -163,7 +164,7 @@ function renderTickets() {
         <!-- Feature tag + creator -->
         <div style="margin-top: 4px; display: flex; gap: 6px; align-items: center;">
             <span style="display: inline-block; padding: 2px 8px; background: #d5bf9f; color: #57534E; border-radius: 3px; font-size: 0.8em; font-weight: 600; cursor: pointer;" onclick="filterByField('feature', '${escapeHtml(t.feature)}')" title="Filter by feature">${escapeHtml(t.feature)}</span>
-            <span style="font-size: 0.78em; color: #888; cursor: pointer;" onclick="filterByField('owner', '${escapeHtml(t.creator_email || 'unknown')}')" title="Filter by owner">by ${escapeHtml(t.creator_email || 'unknown')}</span>
+            <span style="font-size: 0.78em; color: #888; cursor: pointer;" onclick="filterByField('owner', '${escapeHtml(t.creator_username || 'unknown')}')" title="Filter by owner">by ${escapeHtml(t.creator_username || 'unknown')}</span>
         </div>
     
         <!-- Description -->
@@ -379,7 +380,7 @@ function fixComment(ticketId, commentId) {
             if (!t.activity) t.activity = [];
             t.activity.push({
                 action: 'Comment marked as Fixed',
-                action_by: currentUser?.email,
+                action_by: currentUser?.username,
                 timestamp: data.fixed
             });
             renderTickets();
@@ -416,7 +417,7 @@ function reassignTicket(id) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Reassigned',
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: data.reassigned
                 });
             }
@@ -443,11 +444,11 @@ function resolveTicket(id) {
             if (t) {
                 t.isResolved = true;
                 t.resolved = data.resolved;
-                t.resolved_by = currentUser?.email;
+                t.resolved_by = currentUser?.username;
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Resolved',
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: data.resolved
                 });
             }
@@ -541,7 +542,7 @@ function archiveTicket(id) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Archived',
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: data.archived
                 });
             }
@@ -571,7 +572,7 @@ function restoreTicket(id) {
                 if (!t.activity) t.activity = [];
                 t.activity.push({
                     action: 'Restored',
-                    action_by: currentUser?.email,
+                    action_by: currentUser?.username,
                     timestamp: new Date().toLocaleString()
                 });
             }
@@ -587,7 +588,7 @@ function restoreTicket(id) {
 // DELETE TICKETS
 function deleteTicket(id) {
     if (!confirm('Delete this ticket? This cannot be undone.')) return;
-    fetch('/db/delete-ticket', {
+    fetch('/db/ticket-delete', {
         method: 'POST',
         headers: csrfHeaders(),
         body: JSON.stringify({ ticket_id: id })
@@ -639,7 +640,7 @@ function populateFilterDropdowns() {
     ownerSelect.innerHTML = '<option value="">All</option>';
 
     const features = [...new Set(tickets.map(t => t.feature).filter(Boolean))];
-    const owners = [...new Set(tickets.map(t => t.creator_email || t.user_id).filter(Boolean))];
+    const owners = [...new Set(tickets.map(t => t.creator_username || t.user_id).filter(Boolean))];
 
     features.forEach(f => {
         featureSelect.innerHTML += `<option value="${f}">${f}</option>`;
@@ -717,7 +718,8 @@ function renderTicketDashboard(stats) {
         const count = stats.by_status[status] || 0;
         statusRow.innerHTML += `
             <span style="padding: 4px 12px; background: ${color.bg}; color: ${color.fg};
-                border-radius: 4px; font-weight: 600; font-size: 0.9em;">
+                border-radius: 4px; font-weight: 600; font-size: 0.9em;"
+                onclick="filterByField('status', '${status}')">
                 ${color.icon} ${count} ${status}
             </span>`;
     }
@@ -813,4 +815,46 @@ function renderTicketDashboard(stats) {
     }
 
     detailsRow.innerHTML = html;
+}
+
+// DOWNLOAD ALL TICKET LOGS
+function downloadAllTicketLogs() {
+    const lines = [];
+    const now = new Date().toLocaleString();
+    lines.push(`Ticket Log Export — ${now}`);
+    lines.push('='.repeat(60));
+
+    for (const t of tickets) {
+        lines.push('');
+        lines.push(`Ticket #${t.id} — ${t.feature || 'N/A'}`);
+        lines.push(`  Created:     ${t.created || 'N/A'}`);
+        lines.push(`  Creator:     ${t.creator_username || 'N/A'}`);
+        lines.push(`  Status:      ${t.status || 'Open'}`);
+        lines.push(`  Accepted by: ${t.accepted_by || 'N/A'}`);
+        lines.push(`  Resolved:    ${t.isResolved ? (t.resolved || 'Yes') : 'No'}`);
+        lines.push(`  Description: ${t.description || ''}`);
+
+        if (t.activity && t.activity.length) {
+            lines.push('  Activity:');
+            for (const a of t.activity) {
+                lines.push(`    [${a.timestamp}] ${a.action_by}: ${a.action}`);
+            }
+        }
+        if (t.comments && t.comments.length) {
+            lines.push('  Comments:');
+            for (const c of t.comments) {
+                lines.push(`    [${c.commented}] ${c.comment_by}: ${c.comment_description}`);
+            }
+        }
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ticket-logs-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
